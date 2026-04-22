@@ -1,0 +1,131 @@
+<div class="max-w-5xl mx-auto px-4 py-6">
+  <h2 class="text-2xl font-semibold mb-6 text-gray-800">Orders</h2>
+
+  <div
+    *ngFor="let o of orders"
+    class="bg-white shadow-md rounded-xl p-5 mb-4 border border-gray-100 hover:shadow-lg transition"
+  >
+    <!-- Top Row -->
+    <div
+      class="flex flex-col md:flex-row md:justify-between md:items-center gap-2"
+    >
+      <!-- Order Info -->
+      <div>
+        <p class="text-sm text-gray-500">Order ID</p>
+        <p class="font-semibold text-gray-800">#{{ o._id.slice(-5) }}</p>
+      </div>
+
+      <!-- Status Badge -->
+      <div>
+        <span
+          class="px-3 py-1 rounded-full text-xs font-medium"
+          [ngClass]="{
+            'bg-green-100 text-green-700': o.status === 'completed',
+            'bg-yellow-100 text-yellow-700': o.status === 'inprogress',
+            'bg-blue-100 text-blue-700': o.status === 'confirmed',
+            'bg-red-100 text-red-700': o.status === 'rejected',
+          }"
+        >
+          {{ o.status | titlecase }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="border-t my-3"></div>
+
+    <!-- Contact -->
+    <div class="flex flex-col md:flex-row md:justify-between gap-3">
+      <div>
+        <p class="text-sm text-gray-500">Phone</p>
+        <p class="font-medium text-gray-800">{{ o.phone }}</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex flex-wrap gap-2">
+        <a
+          [href]="
+            'https://www.google.com/maps?q=' +
+            o.location.lat +
+            ',' +
+            o.location.lng
+          "
+          target="_blank"
+          class="px-3 py-1 text-sm rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+        >
+          📍 Location
+        </a>
+
+        <a
+          [href]="'tel:' + o.phone"
+          class="px-3 py-1 text-sm rounded-lg bg-green-50 text-green-600 hover:bg-green-100"
+        >
+          📞 Call
+        </a>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button
+        (click)="update(o, 'confirmed')"
+        [disabled]="isDisabled(o, 'confirm')"
+        class="btn text-white"
+        [ngClass]="{
+          'bg-blue-500 hover:bg-blue-600': !isDisabled(o, 'confirm'),
+          'bg-gray-300 cursor-not-allowed': isDisabled(o, 'confirm'),
+        }"
+      >
+        Confirm
+      </button>
+
+      <button
+        (click)="update(o, 'inprogress')"
+        [disabled]="isDisabled(o, 'progress')"
+        class="btn text-white"
+        [ngClass]="{
+          'bg-yellow-500 hover:bg-yellow-600': !isDisabled(o, 'progress'),
+          'bg-gray-300 cursor-not-allowed': isDisabled(o, 'progress'),
+        }"
+      >
+        Progress
+      </button>
+
+      <button
+        (click)="update(o, 'completed')"
+        [disabled]="isDisabled(o, 'done')"
+        class="btn text-white"
+        [ngClass]="{
+          'bg-green-500 hover:bg-green-600': !isDisabled(o, 'done'),
+          'bg-gray-300 cursor-not-allowed': isDisabled(o, 'done'),
+        }"
+      >
+        Done
+      </button>
+
+      <button
+        (click)="assign(o)"
+        [disabled]="o.status !== 'pending'"
+        class="btn text-white"
+        [ngClass]="{
+          'bg-purple-500 hover:bg-purple-600': o.status === 'pending',
+          'bg-gray-300 cursor-not-allowed': o.status !== 'pending',
+        }"
+      >
+        Assign Rider
+      </button>
+
+      <button
+        (click)="update(o, 'rejected')"
+        [disabled]="isDisabled(o, 'reject')"
+        class="btn text-white"
+        [ngClass]="{
+          'bg-red-500 hover:bg-red-600': !isDisabled(o, 'reject'),
+          'bg-gray-300 cursor-not-allowed': isDisabled(o, 'reject'),
+        }"
+      >
+        Reject
+      </button>
+    </div>
+  </div>
+</div>

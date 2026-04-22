@@ -1,0 +1,103 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="bg-white p-6 rounded-2xl shadow w-full max-w-sm space-y-4">
+    <!-- TITLE -->
+    <h2 class="text-xl font-bold text-center">Login</h2>
+
+    <!-- ROLE SWITCH -->
+    <div class="flex justify-between bg-gray-100 rounded-lg p-1">
+      <button
+        (click)="role = 'customer'"
+        [class.bg-white]="role === 'customer'"
+        class="flex-1 py-2 rounded-lg text-sm"
+      >
+        Customer
+      </button>
+
+      <button
+        (click)="role = 'admin'"
+        [class.bg-white]="role === 'admin'"
+        class="flex-1 py-2 rounded-lg text-sm"
+      >
+        Admin
+      </button>
+
+      <button
+        (click)="role = 'delivery'"
+        [class.bg-white]="role === 'delivery'"
+        class="flex-1 py-2 rounded-lg text-sm"
+      >
+        Delivery
+      </button>
+    </div>
+
+    <!-- 👤 CUSTOMER (OTP) -->
+    <div *ngIf="role === 'customer'" class="space-y-3">
+      <input
+        [(ngModel)]="phone"
+        placeholder="Mobile Number"
+        class="w-full border p-2 rounded"
+      />
+
+      <button
+        (click)="sendOTP()"
+        class="w-full bg-green-500 text-white py-2 rounded"
+      >
+        Send OTP
+      </button>
+
+      <div id="recaptcha"></div>
+
+      <input
+        [(ngModel)]="otp"
+        placeholder="Enter OTP"
+        class="w-full border p-2 rounded"
+      />
+
+      <button
+        (click)="verifyOTP()"
+        class="w-full bg-green-600 text-white py-2 rounded"
+      >
+        Verify OTP
+      </button>
+    </div>
+
+    <!-- 🧑‍💼 ADMIN LOGIN -->
+    <div *ngIf="role === 'admin'" class="space-y-3">
+      <input
+        [(ngModel)]="email"
+        placeholder="Email"
+        class="w-full border p-2 rounded"
+      />
+
+      <input
+        [(ngModel)]="password"
+        type="password"
+        placeholder="Password"
+        class="w-full border p-2 rounded"
+      />
+
+      <button
+        (click)="adminLogin()"
+        class="w-full bg-blue-500 text-white py-2 rounded"
+      >
+        Login as Admin
+      </button>
+    </div>
+
+    <!-- 🛵 DELIVERY LOGIN -->
+    <div *ngIf="role === 'delivery'" class="space-y-3">
+      <input
+        [(ngModel)]="phone"
+        placeholder="Delivery Phone"
+        class="w-full border p-2 rounded"
+      />
+
+      <button
+        (click)="deliveryLogin()"
+        class="w-full bg-orange-500 text-white py-2 rounded"
+      >
+        Login as Delivery
+      </button>
+    </div>
+  </div>
+</div>

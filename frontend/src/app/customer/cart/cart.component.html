@@ -1,0 +1,95 @@
+<div class="min-h-screen bg-gray-50 p-4 md:p-6">
+  <div class="max-w-6xl mx-auto">
+    <!-- Title -->
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+      🛒 Your Cart
+    </h1>
+
+    <!-- Empty Cart -->
+    <div *ngIf="!cartItems.length" class="text-center py-20">
+      <p class="text-gray-500 text-lg">Your cart is empty</p>
+      <button
+        routerLink="/customer/menu"
+        class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Browse Menu
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div *ngIf="cartItems.length" class="grid md:grid-cols-3 gap-6">
+      <!-- Items -->
+      <div class="md:col-span-2 space-y-4">
+        <div
+          *ngFor="let item of cartItems"
+          class="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between"
+        >
+          <!-- Left -->
+          <div>
+            <h2 class="font-semibold text-gray-800">
+              {{ item.name }}
+            </h2>
+
+            <p class="text-sm text-gray-500">₹{{ item.price }} each</p>
+          </div>
+
+          <!-- Right -->
+          <div class="flex items-center gap-4">
+            <!-- Quantity -->
+            <div class="flex items-center border rounded-lg overflow-hidden">
+              <button
+                (click)="decrease(item)"
+                class="px-3 py-1 bg-gray-100 hover:bg-gray-200"
+              >
+                −
+              </button>
+
+              <span class="px-3">{{ item.qty }}</span>
+
+              <button
+                (click)="increase(item)"
+                class="px-3 py-1 bg-blue-600 text-white hover:bg-blue-700"
+              >
+                +
+              </button>
+            </div>
+
+            <!-- Price -->
+            <p class="font-semibold text-gray-800 w-16 text-right">
+              ₹{{ item.price * item.qty }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="bg-white rounded-xl shadow-sm p-5 h-fit sticky top-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Order Summary</h3>
+
+        <div class="flex justify-between text-gray-600 mb-2">
+          <span>Items Total</span>
+          <span>₹{{ getTotal() }}</span>
+        </div>
+
+        <div class="flex justify-between text-gray-600 mb-2">
+          <span>Delivery</span>
+          <span class="text-green-600">Free</span>
+        </div>
+
+        <hr class="my-3" />
+
+        <div class="flex justify-between font-bold text-gray-800 text-lg">
+          <span>Total</span>
+          <span>₹{{ getTotal() }}</span>
+        </div>
+
+        <button
+          (click)="placeOrder()"
+          class="mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition"
+        >
+          Place Order
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

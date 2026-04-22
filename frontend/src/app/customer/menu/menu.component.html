@@ -1,0 +1,93 @@
+<div class="min-h-screen bg-gray-50 p-4 md:p-6">
+  <!-- Header -->
+  <div class="max-w-6xl mx-auto mb-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-800">🍽️ Our Menu</h1>
+  </div>
+
+  <!-- Search + Filter -->
+  <div class="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row gap-3">
+    <!-- Search -->
+    <input
+      [(ngModel)]="searchText"
+      (input)="applyFilter()"
+      placeholder="Search food..."
+      class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+    />
+
+    <!-- Filter -->
+    <select
+      [(ngModel)]="selectedCategory"
+      (change)="applyFilter()"
+      class="px-4 py-2 border rounded-lg"
+    >
+      <option *ngFor="let c of categories" [value]="c">
+        {{ c | titlecase }}
+      </option>
+    </select>
+  </div>
+
+  <!-- Grid -->
+  <div
+    class="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+  >
+    <div
+      *ngFor="let item of filteredItems"
+      class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition overflow-hidden group"
+    >
+      <!-- Image -->
+      <img
+        [src]="item.image"
+        class="w-full h-48 object-cover group-hover:scale-105 transition duration-300"
+      />
+
+      <!-- Content -->
+      <div class="p-4">
+        <h3 class="text-lg font-semibold text-gray-800">
+          {{ item.name }}
+        </h3>
+
+        <p class="text-gray-500 text-sm mt-1">Fresh & tasty</p>
+
+        <div class="flex items-center justify-between mt-4">
+          <span class="text-lg font-bold text-gray-900">
+            ₹{{ item.price }}
+          </span>
+
+          <!-- Quantity Buttons -->
+          <div class="flex items-center gap-2">
+            <button
+              (click)="decrease(item)"
+              class="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
+            >
+              -
+            </button>
+
+            <span class="w-6 text-center">
+              {{ quantities[item._id] }}
+            </span>
+
+            <button
+              (click)="increase(item)"
+              class="w-8 h-8 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cart Button -->
+  <button
+    routerLink="/customer/cart"
+    class="fixed bottom-5 right-5 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2"
+  >
+    🛒 Cart
+    <span
+      class="bg-white text-blue-600 px-2 py-0.5 rounded-full text-sm font-semibold"
+    >
+      {{ cartCount }}
+    </span>
+  </button>
+</div>

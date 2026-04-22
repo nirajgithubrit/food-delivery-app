@@ -1,0 +1,147 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- 🔝 HEADER (RESPONSIVE) -->
+  <div
+    class="sticky top-0 z-10 bg-white/95 backdrop-blur shadow-sm px-3 sm:px-4 py-3 flex items-center justify-between"
+  >
+    <!-- LEFT -->
+    <div class="font-semibold flex items-center gap-2 text-3xl leading-tight">
+      <span class="text-base sm:text-lg">🚚</span>
+      <span>Track Order</span>
+    </div>
+
+    <!-- RIGHT -->
+    <span class="text-[10px] sm:text-xs md:text-sm text-gray-500">
+      #{{ order?._id?.slice(-5) }}
+    </span>
+  </div>
+
+  <div class="max-w-xl mx-auto p-3 sm:p-4 space-y-4">
+    <!-- 🗺️ MAP CARD -->
+    <div class="bg-white rounded-2xl shadow overflow-hidden">
+      <google-map height="260px" width="100%" [center]="center" [zoom]="zoom">
+        <!-- 🛵 BIKE -->
+        <map-marker [position]="markerPosition" [icon]="bikeIcon"></map-marker>
+
+        <!-- 🏠 CUSTOMER -->
+        <map-marker [position]="customerLocation"></map-marker>
+
+        <!-- 🛣️ ROUTE -->
+        <map-directions-renderer
+          *ngIf="directionsResults"
+          [directions]="directionsResults"
+        >
+        </map-directions-renderer>
+      </google-map>
+    </div>
+
+    <!-- ⏱ ETA CARD -->
+    <div
+      *ngIf="eta"
+      class="bg-white rounded-2xl shadow p-4 flex items-center justify-between"
+    >
+      <div>
+        <p class="text-sm text-gray-500">
+          {{ isNear ? "Arriving soon" : "Estimated Delivery" }}
+        </p>
+
+        <p class="text-lg sm:text-xl font-bold text-green-600">⏱ {{ eta }}</p>
+      </div>
+
+      <!-- 🛵 ICON -->
+      <div class="relative">
+        <!-- NORMAL -->
+        <div *ngIf="!isNear" class="text-green-500 text-xl">🛵</div>
+
+        <!-- 🔥 PULSE ANIMATION -->
+        <div *ngIf="isNear" class="relative flex items-center justify-center">
+          <span
+            class="absolute inline-flex h-8 w-8 rounded-full bg-green-400 opacity-75 animate-ping"
+          ></span>
+
+          <span class="relative text-xl">🛵</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📊 ORDER STATUS -->
+    <!-- 📊 ORDER STATUS -->
+    <div class="bg-white rounded-2xl shadow p-4">
+      <h3 class="font-semibold mb-4 text-sm sm:text-base">Order Status</h3>
+
+      <!-- 🔥 SMART STATUS MESSAGE -->
+      <p *ngIf="order.status === 'pending'" class="text-gray-400 text-sm">
+        Order placed. Waiting for restaurant...
+      </p>
+
+      <p *ngIf="order.status === 'confirmed'" class="text-gray-400 text-sm">
+        Restaurant accepted your order.
+      </p>
+
+      <p
+        *ngIf="
+          order.status === 'inprogress' && order.pickupStatus === 'pending'
+        "
+        class="text-blue-600 text-sm"
+      >
+        🚴 Rider going to restaurant
+      </p>
+
+      <p
+        *ngIf="order.status === 'inprogress' && order.pickupStatus === 'picked'"
+        class="text-green-600 text-sm"
+      >
+        🛵 Rider is on the way!
+      </p>
+
+      <p *ngIf="order.status === 'completed'" class="text-green-600 text-sm">
+        ✅ Delivered successfully
+      </p>
+
+      <!-- 📊 STEPS -->
+      <div class="space-y-6 mt-4">
+        <div
+          *ngFor="let step of steps; let i = index"
+          class="flex items-start gap-4 relative"
+        >
+          <!-- LINE -->
+          <div
+            *ngIf="i < steps.length - 1"
+            class="absolute left-[10px] top-6 h-full w-[2px]"
+            [ngClass]="{
+              'bg-green-500': i < getStepIndex(order?.status),
+              'bg-gray-300': i >= getStepIndex(order?.status),
+            }"
+          ></div>
+
+          <!-- CIRCLE -->
+          <div
+            class="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs mt-1"
+            [ngClass]="{
+              'bg-green-500': i <= getStepIndex(order?.status),
+              'bg-gray-300': i > getStepIndex(order?.status),
+            }"
+          >
+            ✔
+          </div>
+
+          <!-- TEXT -->
+          <div>
+            <p
+              class="font-medium text-sm sm:text-base"
+              [ngClass]="{
+                'text-green-600': i <= getStepIndex(order?.status),
+                'text-gray-400': i > getStepIndex(order?.status),
+              }"
+            >
+              {{ step.label }}
+            </p>
+
+            <p class="text-xs text-gray-400">
+              {{ i <= getStepIndex(order?.status) ? "Completed" : "Pending" }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,29 @@
+<div class="p-4 max-w-md mx-auto">
+  <h2 class="text-xl font-bold mb-4">Add Food Item</h2>
+
+  <input
+    [(ngModel)]="item.name"
+    placeholder="Item Name"
+    class="border p-2 w-full mb-2"
+  />
+
+  <input
+    [(ngModel)]="item.price"
+    type="number"
+    placeholder="Price"
+    class="border p-2 w-full mb-2"
+  />
+
+  <input
+    [(ngModel)]="item.image"
+    placeholder="Image URL"
+    class="border p-2 w-full mb-2"
+  />
+
+  <button
+    (click)="addItem()"
+    class="bg-blue-500 text-white px-4 py-2 w-full rounded"
+  >
+    Add Item
+  </button>
+</div>
