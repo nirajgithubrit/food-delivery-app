@@ -1,46 +1,59 @@
 import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class SocketService {
+  socket!: Socket;
 
-    socket: Socket;
+  constructor() {
+    this.createSocket();
+  }
 
-    constructor() {
-        this.socket = io('http://localhost:3000', {
-            withCredentials: true,
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000
-        });
+  private readToken(): string {
+    if (typeof sessionStorage === 'undefined') return '';
+    return sessionStorage.getItem('authToken') ?? '';
+  }
 
-        this.socket.on('connect', () => {
-            console.log('✅ Socket connected:', this.socket.id);
-        });
-
-        this.socket.on('disconnect', () => {
-            console.log('❌ Socket disconnected');
-        });
+  private createSocket(): void {
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
     }
 
-    // ✅ LISTEN WITH AUTO CLEAN
-    listen(event: string, callback: (data: any) => void) {
-        this.socket.off(event); // 🔥 remove old listener (IMPORTANT)
-        this.socket.on(event, callback);
-    }
+    this.socket = io(environment.socketUrl, {
+      auth: { token: this.readToken() },
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+    });
 
-    // ✅ REMOVE ONLY SPECIFIC EVENT
-    off(event: string) {
-        this.socket.off(event);
-    }
+    this.socket.on('connect', () => {
+      console.log('Socket connected:', this.socket.id);
+    });
 
-    emit(event: string, data: any) {
-        this.socket.emit(event, data);
-    }
+    this.socket.on('disconnect', () => {
+      console.log('Socket disconnected');
+    });
+  }
 
-    // ⚠️ DO NOT USE THIS IN COMPONENTS
-    disconnect() {
-        this.socket.disconnect();
-    }
+  /** Call after login so the handshake includes a fresh JWT. */
+  reconnect(): void {
+    this.createSocket();
+  }
+
+  listen(event: string, callback: (data: unknown) => void): void {
+    this.socket.off(event);
+    this.socket.on(event, callback);
+  }
+
+  off(event: string): void {
+    this.socket.off(event);
+  }
+
+  emit(event: string, data?: unknown): void {
+    this.socket.emit(event, data);
+  }
 }

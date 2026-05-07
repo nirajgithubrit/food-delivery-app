@@ -1,0 +1,22 @@
+:host.order-track-root {
+  display: block;
+  min-height: 100dvh;
+}
+
+.track-sheet-body {
+  -webkit-overflow-scrolling: touch;
+}
+
+.track-map-card google-map {
+  display: block;
+}
+
+.track-timeline {
+  scroll-margin-top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ping {
+    animation: none !important;
+  }
+}

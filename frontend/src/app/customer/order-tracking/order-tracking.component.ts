@@ -1,197 +1,229 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { ApiService } from '../../services/api.service';
-import { SocketService } from '../../services/socket.service';
-import { CommonModule } from '@angular/common';
-import { GoogleMapsModule } from '@angular/google-maps';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  inject,
+  signal,
+} from "@angular/core";
+import { ApiService } from "../../services/api.service";
+import { SocketService } from "../../services/socket.service";
+import { ToastService } from "../../shared/services/toast.service";
+import { CommonModule } from "@angular/common";
+import { RouterLink } from "@angular/router";
+import { GoogleMapsModule } from "@angular/google-maps";
+import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
+import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
+import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
 
 @Component({
-  selector: 'app-order-tracking',
+  selector: "app-order-tracking",
   standalone: true,
-  imports: [CommonModule, GoogleMapsModule],
-  templateUrl: './order-tracking.component.html',
-  styleUrl: './order-tracking.component.scss'
+  imports: [
+    CommonModule,
+    RouterLink,
+    GoogleMapsModule,
+    UiCardComponent,
+    UiSkeletonComponent,
+    UiButtonComponent,
+  ],
+  templateUrl: "./order-tracking.component.html",
+  styleUrl: "./order-tracking.component.scss",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: "order-track-root" },
 })
 export class OrderTrackingComponent implements OnInit, OnDestroy {
+  private readonly api = inject(ApiService);
+  private readonly socket = inject(SocketService);
+  private readonly zone = inject(NgZone);
+  private readonly toast = inject(ToastService);
 
-  order: any;
+  readonly order = signal<any | null>(null);
+  readonly loading = signal(true);
+  readonly sheetOpen = signal(true);
 
-  // 🗺️ MAP
-  center!: google.maps.LatLngLiteral;
-  markerPosition!: google.maps.LatLngLiteral;
+  center = signal<google.maps.LatLngLiteral>({ lat: 0, lng: 0 });
+  markerPosition = signal<google.maps.LatLngLiteral>({ lat: 0, lng: 0 });
   zoom = 15;
 
-  // 🛣️ ROUTE + ETA
-  directionsResults?: google.maps.DirectionsResult;
-  eta: string = '';
+  directionsResults = signal<google.maps.DirectionsResult | undefined>(
+    undefined,
+  );
+  eta = signal("");
+  customerLocation = signal<google.maps.LatLngLiteral>({ lat: 0, lng: 0 });
+  restaurantLocation = signal<google.maps.LatLngLiteral>({ lat: 0, lng: 0 });
 
-  // 📍 CUSTOMER LOCATION
-  customerLocation!: google.maps.LatLngLiteral;
-  restaurantLocation!: google.maps.LatLngLiteral;
+  readonly steps = [
+    { key: "pending", label: "Order placed" },
+    { key: "confirmed", label: "Restaurant accepted" },
+    { key: "preparing", label: "Preparing your meal" },
+    { key: "pickup", label: "Picked by rider" },
+    { key: "completed", label: "Delivered" },
+  ] as const;
 
-  // 📊 STATUS STEPS
-  steps = [
-    { key: 'pending', label: 'Order Placed' },
-    { key: 'confirmed', label: 'Restaurant Accepted' },
-    { key: 'preparing', label: 'Preparing Food' },
-    { key: 'pickup', label: 'Picked by Rider' },
-    { key: 'completed', label: 'Delivered' }
-  ];
+  isNear = signal(false);
+  private prevStatus = "";
+  private prevPickupStatus = "";
 
-  isNear = false;
-  private prevStatus = '';
-  private prevPickupStatus = '';
-
-  // 🛵 BIKE ICON
-  bikeIcon: google.maps.Icon = {
-    url: 'bike_icon.png',
-    scaledSize: new google.maps.Size(45, 45),
-    anchor: new google.maps.Point(22, 22)
+  readonly mapUiOptions: google.maps.MapOptions = {
+    disableDefaultUI: true,
+    zoomControl: true,
+    styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }],
   };
 
-  constructor(
-    private api: ApiService,
-    private socket: SocketService,
-    private cdr: ChangeDetectorRef
-  ) { }
+  bikeIcon: google.maps.Icon = {
+    url: "bike_icon.png",
+    scaledSize: new google.maps.Size(45, 45),
+    anchor: new google.maps.Point(22, 22),
+  };
 
-  ngOnInit() {
+  ngOnInit(): void {
+    this.socket.listen("order-updated", (data: any) => {
+      if (String(data._id) !== String(this.order()?._id)) return;
 
-    // 🔥 ORDER STATUS UPDATE
-    this.socket.listen('order-updated', (data: any) => {
+      const statusChanged = this.prevStatus !== data.status;
+      const pickupChanged = this.prevPickupStatus !== data.pickupStatus;
 
-      if (data._id.toString() === this.order?._id.toString()) {
-
-        const statusChanged = this.prevStatus !== data.status
-        const pickupChanged = this.prevPickupStatus !== data.pickupStatus;
-
-        if (statusChanged || pickupChanged) {
-          new Audio('notify.wav').play().catch(() => {
-            console.log('🔇 Sound blocked, user interaction required');
-          });
-        }
-
-        this.prevStatus = data.status;
-        this.prevPickupStatus = data.pickupStatus;
-
-        this.order = data;
-
-        this.cdr.detectChanges();
+      if (data.status === "rejected" && statusChanged) {
+        this.toast.error(
+          "This order was declined by the restaurant. You have not been charged.",
+        );
+        this.eta.set("");
+        this.directionsResults.set(undefined);
+      } else if (statusChanged || pickupChanged) {
+        new Audio("notify.wav").play().catch(() => undefined);
       }
+
+      this.prevStatus = data.status;
+      this.prevPickupStatus = data.pickupStatus;
+      this.order.set(data);
     });
 
-    // 🔥 LIVE LOCATION UPDATE
-    this.socket.listen('location-update', (order: any) => {
-
-      if (order?._id === this.order?._id && order?.deliveryLocation) {
-
-        const rider = {
-          lat: order.deliveryLocation.lat,
-          lng: order.deliveryLocation.lng
-        };
-
-        this.markerPosition = rider;
-        this.center = rider;
-
-        // 🔥 PHASE BASED TARGET
-        let target;
-
-        if (order.pickupStatus === 'pending') {
-          target = this.restaurantLocation;
-        } else {
-          target = this.customerLocation;
-        }
-
-        const distance = this.getDistance(rider, target);
-
-        if (distance < 0.005) {
-          this.isNear = true;
-        }
-
-        this.getRoute(rider, target);
-
-        this.cdr.detectChanges();
+    this.socket.listen("location-update", (ord: any) => {
+      if (
+        String(ord?._id) !== String(this.order()?._id) ||
+        !ord?.deliveryLocation ||
+        this.order()?.status === "rejected"
+      ) {
+        return;
       }
+
+      const rider = {
+        lat: ord.deliveryLocation.lat,
+        lng: ord.deliveryLocation.lng,
+      };
+
+      this.markerPosition.set(rider);
+      this.center.set(rider);
+
+      const target =
+        ord.pickupStatus === "pending"
+          ? this.restaurantLocation()
+          : this.customerLocation();
+
+      const distance = this.getDistance(rider, target);
+      this.isNear.set(distance < 0.005);
+
+      this.getRoute(rider, target);
     });
 
     this.loadOrder();
   }
 
-  // 📦 LOAD ORDER
-  loadOrder() {
-    this.api.getOrders().subscribe((res: any) => {
+  loadOrder(): void {
+    this.loading.set(true);
+    this.api.getCustomerOrders().subscribe({
+      next: (orders: any[]) => {
+        const savedId = localStorage.getItem("orderId");
+        const match = savedId
+          ? orders?.find((o) => String(o._id) === String(savedId))
+          : undefined;
+        const o = match ?? orders?.[0] ?? null;
+        this.order.set(o);
+        if (!o) {
+          this.loading.set(false);
+          return;
+        }
 
-      this.order = res.reverse()[0]; // latest order
-      if (!this.order) return;
+        this.prevStatus = o.status ?? "";
+        this.prevPickupStatus = o.pickupStatus ?? "";
 
-      this.socket.emit('join-order', this.order._id);
+        this.socket.emit("join-order", o._id);
 
-      // ✅ CUSTOMER LOCATION (backend)
-      this.customerLocation = {
-        lat: this.order.location.lat,
-        lng: this.order.location.lng
-      };
+        this.customerLocation.set({
+          lat: o.location.lat,
+          lng: o.location.lng,
+        });
+        this.restaurantLocation.set({
+          lat: o.restaurantLocation.lat,
+          lng: o.restaurantLocation.lng,
+        });
 
-      this.restaurantLocation = {
-        lat: this.order.restaurantLocation.lat,
-        lng: this.order.restaurantLocation.lng
-      };
+        if (o.status === "rejected") {
+          this.eta.set("");
+          this.directionsResults.set(undefined);
+        } else {
+          const start = o.deliveryLocation || this.restaurantLocation();
+          this.markerPosition.set(start);
+          this.center.set(start);
+          this.getRoute(start, this.restaurantLocation());
+        }
 
-      // ✅ RIDER LOCATION (backend or fallback)
-      this.markerPosition = this.markerPosition = this.order.deliveryLocation || this.restaurantLocation;
-
-      this.center = this.markerPosition;
-
-      this.getRoute(this.markerPosition, this.restaurantLocation);
-
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
     });
   }
 
-  // 📊 STEP INDEX
-  getStepIndex(status: string) {
-    if (status === 'pending') return 0;
-    if (status === 'confirmed') return 1;
-
-    if (status === 'inprogress') {
-      return this.order?.pickupStatus === 'picked' ? 3 : 2;
+  /** Active step index for timeline; -1 when rejected */
+  getStepIndex(status: string | undefined): number {
+    if (!status || status === "rejected") return -1;
+    if (status === "pending") return 0;
+    if (status === "confirmed") return 1;
+    if (status === "inprogress") {
+      return this.order()?.pickupStatus === "picked" ? 3 : 2;
     }
-
-    if (status === 'completed') return 4;
-
+    if (status === "completed") return 4;
     return 0;
   }
 
-  // 🛣️ GET ROUTE
-  getRoute(origin: google.maps.LatLngLiteral, destination: google.maps.LatLngLiteral) {
-
+  getRoute(
+    origin: google.maps.LatLngLiteral,
+    destination: google.maps.LatLngLiteral,
+  ): void {
     const directionsService = new google.maps.DirectionsService();
 
-    directionsService.route({
-      origin,
-      destination,
-      travelMode: google.maps.TravelMode.DRIVING
-    }, (result, status) => {
-
-      console.log(status);
-
-      if (status === 'OK' && result) {
-
-        this.directionsResults = result;
-
-        const leg = result.routes[0].legs[0];
-        this.eta = leg.duration?.text || '';
-      }
-    });
+    directionsService.route(
+      {
+        origin,
+        destination,
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        this.zone.run(() => {
+          if (status === "OK" && result) {
+            this.directionsResults.set(result);
+            const leg = result.routes[0].legs[0];
+            this.eta.set(leg.duration?.text || "");
+          }
+        });
+      },
+    );
   }
 
-  // 📏 DISTANCE
-  getDistance(a: any, b: any) {
+  getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
     const dx = a.lat - b.lat;
     const dy = a.lng - b.lng;
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  ngOnDestroy() {
-    this.socket.off('order-updated');
-    this.socket.off('location-update');
+  toggleSheet(): void {
+    this.sheetOpen.update((v) => !v);
+  }
+
+  ngOnDestroy(): void {
+    this.socket.off("order-updated");
+    this.socket.off("location-update");
   }
 }

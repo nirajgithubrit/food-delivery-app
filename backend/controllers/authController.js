@@ -1,13 +1,20 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
+const ApiResponse = require("../utils/apiResponse");
+const config = require("../config");
 
 const generateToken = (user) => {
-  return jwt.sign({ id: user._id, role: user.role }, "SECRET_KEY", {
-    expiresIn: "7d",
-  });
+  const payload = { id: user._id.toString(), role: user.role };
+  return jwt.sign(payload, config.jwtSecret, { expiresIn: "7d" });
 };
 
-// 📱 CUSTOMER LOGIN (OTP SIMULATION)
+const cookieOptions = {
+  httpOnly: true,
+  secure: config.cookieSecure,
+  sameSite: config.cookieSecure ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
 exports.customerLogin = async (req, res) => {
   const { phone } = req.body;
 
@@ -19,37 +26,41 @@ exports.customerLogin = async (req, res) => {
 
   const token = generateToken(user);
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-  });
+  res.cookie("token", token, cookieOptions);
 
-  res.send({ message: "Customer login success", role: user.role });
+  ApiResponse.success(res, {
+    message: "Customer login success",
+    role: user.role,
+    token,
+    user: { id: user._id, role: user.role, phone: user.phone },
+  });
 };
 
-// 🧑‍💼 ADMIN LOGIN
 exports.adminLogin = async (req, res) => {
   const { email, password } = req.body;
 
-  if (email === "admin@gmail.com" && password === "123456") {
-    const token = jwt.sign({ role: "admin" }, "SECRET_KEY", {
-      expiresIn: "7d",
-    });
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@gmail.com";
+  const adminPassword = process.env.ADMIN_PASSWORD || "123456";
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-    });
+  if (email === adminEmail && password === adminPassword) {
+    const token = jwt.sign(
+      { id: "admin", role: "admin" },
+      config.jwtSecret,
+      { expiresIn: "7d" },
+    );
 
-    return res.send({ message: "Admin login success", role: "admin" });
+    res.cookie("token", token, cookieOptions);
+
+    return ApiResponse.success(res, {
+      message: "Admin login success",
+      role: "admin",
+      token,
+    });
   }
 
-  res.status(401).send({ message: "Invalid credentials" });
+  return ApiResponse.fail(res, "Invalid credentials", 401);
 };
 
-// 🛵 DELIVERY LOGIN
 exports.deliveryLogin = async (req, res) => {
   const { phone } = req.body;
 
@@ -59,26 +70,27 @@ exports.deliveryLogin = async (req, res) => {
     user = await User.create({ phone, role: "delivery" });
   }
 
-  const token = jwt.sign({ id: user._id, role: "delivery" }, "SECRET_KEY", {
-    expiresIn: "7d",
-  });
+  const token = generateToken(user);
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-  });
+  res.cookie("token", token, cookieOptions);
 
-  res.send({ message: "Delivery login success", user });
+  ApiResponse.success(res, {
+    message: "Delivery login success",
+    role: user.role,
+    token,
+    user,
+  });
 };
 
-// GET CURRENT USER
 exports.getMe = (req, res) => {
-  res.send(req.user);
+  ApiResponse.success(res, req.user);
 };
 
-// 🚪 LOGOUT
 exports.logout = (req, res) => {
-  res.clearCookie("token");
-  res.send({ message: "Logged out" });
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: config.cookieSecure,
+    sameSite: config.cookieSecure ? "none" : "lax",
+  });
+  ApiResponse.success(res, { message: "Logged out" });
 };

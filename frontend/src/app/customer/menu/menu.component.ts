@@ -1,67 +1,116 @@
-import { Component, OnInit } from '@angular/core';
-import { ApiService } from '../../services/api.service';
-import { CartService } from '../../services/cart.service';
-import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from "@angular/core";
+import { toSignal } from "@angular/core/rxjs-interop";
+import { ApiService } from "../../services/api.service";
+import { CartService } from "../../services/cart.service";
+import { ToastService } from "../../shared/services/toast.service";
+import { CommonModule } from "@angular/common";
+import { RouterLink } from "@angular/router";
+import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
+import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
+import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
+import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-state.component";
+import { catchError, of } from "rxjs";
 
 @Component({
-  selector: 'app-menu',
+  selector: "app-menu",
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
-  templateUrl: './menu.component.html',
-  styleUrl: './menu.component.scss'
+  imports: [
+    CommonModule,
+    RouterLink,
+    UiButtonComponent,
+    UiCardComponent,
+    UiSkeletonComponent,
+    UiEmptyStateComponent,
+  ],
+  templateUrl: "./menu.component.html",
+  styleUrl: "./menu.component.scss",
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MenuComponent implements OnInit {
+export class MenuComponent {
+  private readonly api = inject(ApiService);
+  private readonly cart = inject(CartService);
+  private readonly toast = inject(ToastService);
 
-  items: any[] = [];
-  filteredItems: any[] = [];
+  readonly loading = signal(true);
+  readonly items = signal<any[]>([]);
+  readonly searchText = signal("");
+  readonly selectedCategory = signal<string>("all");
+  readonly categories = ["all", "dosa", "pizza", "burger"] as const;
 
-  searchText: string = '';
-  selectedCategory: string = 'all';
+  private readonly quantitiesMap = signal<Record<string, number>>({});
 
-  categories: string[] = ['all', 'dosa', 'pizza', 'burger'];
+  private readonly cartItems = toSignal(this.cart.getItems(), {
+    initialValue: [] as any[],
+  });
 
-  cartCount: number = 0;
-  quantities: { [key: string]: number } = {};
+  readonly cartCount = computed(() =>
+    this.cartItems().reduce((sum, i) => sum + (i.qty ?? 0), 0),
+  );
 
-  constructor(private api: ApiService, private cart: CartService) { }
-
-  ngOnInit() {
-    this.api.getItems().subscribe((res: any) => {
-      this.items = res;
-
-      // Initialize quantities
-      res.forEach((item: any) => {
-        this.quantities[item._id] = 0;
-      });
-
-      this.applyFilter();
-    });
-
-    // Cart count (update based on your service)
-    this.cart.getItems().subscribe((items: any[]) => {
-      this.cartCount = items.reduce((sum, i) => sum + i.qty, 0);
-    });
-  }
-
-  applyFilter() {
-    this.filteredItems = this.items.filter(item => {
-      const matchSearch = item.name.toLowerCase().includes(this.searchText.toLowerCase());
-      const matchCategory = this.selectedCategory === 'all' || item.category === this.selectedCategory;
+  readonly filteredItems = computed(() => {
+    const q = this.searchText().toLowerCase();
+    const cat = this.selectedCategory();
+    return this.items().filter((item) => {
+      const matchSearch = (item.name ?? "").toLowerCase().includes(q);
+      const matchCategory = cat === "all" || item.category === cat;
       return matchSearch && matchCategory;
     });
+  });
+
+  constructor() {
+    this.api
+      .getItems()
+      .pipe(
+        catchError(() => {
+          this.toast.error("Could not load menu. Try again.");
+          return of([] as any[]);
+        }),
+      )
+      .subscribe((res: any) => {
+        const list = Array.isArray(res) ? res : [];
+        this.items.set(list);
+        const map: Record<string, number> = {};
+        list.forEach((item: any) => {
+          map[item._id] = 0;
+        });
+        this.quantitiesMap.set(map);
+        this.loading.set(false);
+      });
   }
 
-  increase(item: any) {
-    this.quantities[item._id]++;
+  qty(id: string): number {
+    return this.quantitiesMap()[id] ?? 0;
+  }
+
+  applyFilters(): void {
+    // signals already drive filteredItems; method kept for template (input/change)
+  }
+
+  onSearch(value: string): void {
+    this.searchText.set(value);
+  }
+
+  onCategory(value: string): void {
+    this.selectedCategory.set(value);
+  }
+
+  increase(item: any): void {
+    const id = item._id;
+    this.quantitiesMap.update((m) => ({ ...m, [id]: (m[id] ?? 0) + 1 }));
     this.cart.add(item);
   }
 
-  decrease(item: any) {
-    if (this.quantities[item._id] > 0) {
-      this.quantities[item._id]--;
-      this.cart.remove(item); // make sure remove method exists
-    }
+  decrease(item: any): void {
+    const id = item._id;
+    const current = this.quantitiesMap()[id] ?? 0;
+    if (current <= 0) return;
+    this.quantitiesMap.update((m) => ({ ...m, [id]: current - 1 }));
+    this.cart.remove(item);
   }
 }

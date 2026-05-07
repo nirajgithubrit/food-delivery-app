@@ -1,103 +1,132 @@
-<div class="min-h-screen flex items-center justify-center bg-gray-100">
-  <div class="bg-white p-6 rounded-2xl shadow w-full max-w-sm space-y-4">
-    <!-- TITLE -->
-    <h2 class="text-xl font-bold text-center">Login</h2>
+<div
+  class="relative flex min-h-dvh items-center justify-center overflow-hidden px-3 py-8 sm:px-4 sm:py-10"
+>
+  <div
+    class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(249,115,22,0.14),transparent_50%),radial-gradient(ellipse_at_100%_30%,rgba(59,130,246,0.1),transparent_45%),radial-gradient(ellipse_at_50%_100%,rgba(16,185,129,0.08),transparent_50%)] dark:opacity-60"
+  ></div>
 
-    <!-- ROLE SWITCH -->
-    <div class="flex justify-between bg-gray-100 rounded-lg p-1">
+  <div
+    class="relative w-full max-w-[22rem] rounded-2xl border border-white/60 bg-white/90 p-5 shadow-lift backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/85 sm:max-w-md sm:rounded-3xl sm:p-7"
+  >
+    <div class="text-center">
+      <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-600">
+        LocalBite
+      </p>
+      <h1 class="mt-1.5 font-display text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+        Sign in
+      </h1>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Pick a role to continue
+      </p>
+    </div>
+
+    <div
+      class="mt-5 grid grid-cols-3 gap-0.5 rounded-xl bg-slate-100/90 p-0.5 dark:bg-slate-800/90"
+      role="tablist"
+      aria-label="Login role"
+    >
       <button
-        (click)="role = 'customer'"
-        [class.bg-white]="role === 'customer'"
-        class="flex-1 py-2 rounded-lg text-sm"
+        type="button"
+        role="tab"
+        [attr.aria-selected]="role() === 'customer'"
+        class="focus-ring rounded-lg py-2 text-[11px] font-semibold transition sm:text-xs"
+        [class.bg-white]="role() === 'customer'"
+        [class.shadow-sm]="role() === 'customer'"
+        [class.dark:bg-slate-900]="role() === 'customer'"
+        (click)="setRole('customer')"
       >
         Customer
       </button>
-
       <button
-        (click)="role = 'admin'"
-        [class.bg-white]="role === 'admin'"
-        class="flex-1 py-2 rounded-lg text-sm"
+        type="button"
+        role="tab"
+        [attr.aria-selected]="role() === 'admin'"
+        class="focus-ring rounded-lg py-2 text-[11px] font-semibold transition sm:text-xs"
+        [class.bg-white]="role() === 'admin'"
+        [class.shadow-sm]="role() === 'admin'"
+        [class.dark:bg-slate-900]="role() === 'admin'"
+        (click)="setRole('admin')"
       >
         Admin
       </button>
-
       <button
-        (click)="role = 'delivery'"
-        [class.bg-white]="role === 'delivery'"
-        class="flex-1 py-2 rounded-lg text-sm"
+        type="button"
+        role="tab"
+        [attr.aria-selected]="role() === 'delivery'"
+        class="focus-ring rounded-lg py-2 text-[11px] font-semibold transition sm:text-xs"
+        [class.bg-white]="role() === 'delivery'"
+        [class.shadow-sm]="role() === 'delivery'"
+        [class.dark:bg-slate-900]="role() === 'delivery'"
+        (click)="setRole('delivery')"
       >
-        Delivery
+        Rider
       </button>
     </div>
 
-    <!-- 👤 CUSTOMER (OTP) -->
-    <div *ngIf="role === 'customer'" class="space-y-3">
-      <input
-        [(ngModel)]="phone"
-        placeholder="Mobile Number"
-        class="w-full border p-2 rounded"
-      />
+    @if (role() === 'customer') {
+      <div class="mt-5 space-y-2.5" role="tabpanel">
+        <label class="sr-only" for="cust-phone">Mobile number</label>
+        <input
+          id="cust-phone"
+          [(ngModel)]="phone"
+          placeholder="Mobile number"
+          autocomplete="tel"
+          class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
+        />
+        <ui-button variant="accent" [block]="true" (click)="sendOTP()">Send OTP</ui-button>
+        <div id="recaptcha" class="min-h-0"></div>
+        <label class="sr-only" for="cust-otp">One-time password</label>
+        <input
+          id="cust-otp"
+          [(ngModel)]="otp"
+          placeholder="Enter OTP"
+          autocomplete="one-time-code"
+          class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
+        />
+        <ui-button variant="primary" [block]="true" (click)="verifyOTP()">Verify & continue</ui-button>
+      </div>
+    }
 
-      <button
-        (click)="sendOTP()"
-        class="w-full bg-green-500 text-white py-2 rounded"
-      >
-        Send OTP
-      </button>
+    @if (role() === 'admin') {
+      <div class="mt-5 space-y-2.5" role="tabpanel">
+        <label class="sr-only" for="adm-email">Email</label>
+        <input
+          id="adm-email"
+          [(ngModel)]="email"
+          type="email"
+          autocomplete="username"
+          placeholder="Email"
+          class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
+        />
+        <label class="sr-only" for="adm-pass">Password</label>
+        <input
+          id="adm-pass"
+          [(ngModel)]="password"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Password"
+          class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
+        />
+        <ui-button variant="secondary" [block]="true" (click)="adminLogin()">
+          Continue as admin
+        </ui-button>
+      </div>
+    }
 
-      <div id="recaptcha"></div>
-
-      <input
-        [(ngModel)]="otp"
-        placeholder="Enter OTP"
-        class="w-full border p-2 rounded"
-      />
-
-      <button
-        (click)="verifyOTP()"
-        class="w-full bg-green-600 text-white py-2 rounded"
-      >
-        Verify OTP
-      </button>
-    </div>
-
-    <!-- 🧑‍💼 ADMIN LOGIN -->
-    <div *ngIf="role === 'admin'" class="space-y-3">
-      <input
-        [(ngModel)]="email"
-        placeholder="Email"
-        class="w-full border p-2 rounded"
-      />
-
-      <input
-        [(ngModel)]="password"
-        type="password"
-        placeholder="Password"
-        class="w-full border p-2 rounded"
-      />
-
-      <button
-        (click)="adminLogin()"
-        class="w-full bg-blue-500 text-white py-2 rounded"
-      >
-        Login as Admin
-      </button>
-    </div>
-
-    <!-- 🛵 DELIVERY LOGIN -->
-    <div *ngIf="role === 'delivery'" class="space-y-3">
-      <input
-        [(ngModel)]="phone"
-        placeholder="Delivery Phone"
-        class="w-full border p-2 rounded"
-      />
-
-      <button
-        (click)="deliveryLogin()"
-        class="w-full bg-orange-500 text-white py-2 rounded"
-      >
-        Login as Delivery
-      </button>
-    </div>
+    @if (role() === 'delivery') {
+      <div class="mt-5 space-y-2.5" role="tabpanel">
+        <label class="sr-only" for="del-phone">Rider phone</label>
+        <input
+          id="del-phone"
+          [(ngModel)]="phone"
+          placeholder="Rider phone"
+          autocomplete="tel"
+          class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
+        />
+        <ui-button variant="primary" [block]="true" (click)="deliveryLogin()">
+          Go online
+        </ui-button>
+      </div>
+    }
   </div>
 </div>

@@ -1,7 +1,10 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+const config = require("./config");
+const logger = require("./utils/logger");
 
-mongoose.connect('mongodb://127.0.0.1:27017/localbite')
-  .then(() => console.log("DB Connected"))
-  .catch(err => console.log(err));
+mongoose
+  .connect(config.mongoUri)
+  .then(() => logger.info({ msg: "MongoDB connected" }))
+  .catch((err) => logger.error({ msg: "MongoDB connection error", err: err.message }));
 
 module.exports = mongoose;

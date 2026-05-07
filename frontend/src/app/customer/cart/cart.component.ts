@@ -1,68 +1,102 @@
-import { Component } from '@angular/core';
-import { ApiService } from '../../services/api.service';
-import { CartService } from '../../services/cart.service';
-import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from "@angular/core";
+import { toSignal } from "@angular/core/rxjs-interop";
+import { ApiService } from "../../services/api.service";
+import { CartService } from "../../services/cart.service";
+import { ToastService } from "../../shared/services/toast.service";
+import { CommonModule } from "@angular/common";
+import { Router, RouterLink } from "@angular/router";
+import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
+import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
+import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-state.component";
 
 @Component({
-  selector: 'app-cart',
+  selector: "app-cart",
   standalone: true,
-  imports: [CommonModule, RouterLink],
-  templateUrl: './cart.component.html',
-  styleUrl: './cart.component.scss'
+  imports: [
+    CommonModule,
+    RouterLink,
+    UiButtonComponent,
+    UiCardComponent,
+    UiEmptyStateComponent,
+  ],
+  templateUrl: "./cart.component.html",
+  styleUrl: "./cart.component.scss",
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CartComponent {
-  cartItems: any[] = [];
+  private readonly cart = inject(CartService);
+  private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
 
-  constructor(
-    private cart: CartService,
-    private api: ApiService,
-    private router: Router
-  ) {
-    this.cart.getItems().subscribe((res) => {
-      this.cartItems = res;
-    });
+  readonly cartItems = toSignal(this.cart.getItems(), {
+    initialValue: [] as any[],
+  });
+
+  readonly paymentMethod = signal<"cod" | "upi">("cod");
+
+  readonly total = computed(() =>
+    this.cartItems().reduce((sum, item) => sum + item.price * item.qty, 0),
+  );
+
+  setPay(method: "cod" | "upi"): void {
+    this.paymentMethod.set(method);
   }
 
-  increase(item: any) {
+  increase(item: any): void {
     this.cart.add(item);
   }
 
-  decrease(item: any) {
+  decrease(item: any): void {
     this.cart.remove(item);
   }
 
-  getTotal() {
-    return this.cartItems.reduce((sum, item) => {
-      return sum + item.price * item.qty;
-    }, 0);
-  }
+  placeOrder(): void {
+    const items = this.cartItems();
+    if (!items.length) return;
 
-  placeOrder() {
-    if (!this.cartItems.length) return;
+    if (!navigator.geolocation) {
+      this.toast.error("Location is required to place an order.");
+      return;
+    }
 
-    navigator.geolocation.getCurrentPosition((pos) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const orderData = {
+          items,
+          totalAmount: this.total(),
+          location: {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          },
+          phone: "8155012096",
+          paymentMethod: this.paymentMethod(),
+        };
 
-      const orderData = {
-        items: this.cartItems,
-        totalAmount: this.getTotal(),
-        location: {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude
-        },
-        phone: '8155012096'
-      };
-
-      this.api.placeOrder(orderData).subscribe((res: any) => {
-
-        localStorage.setItem('orderId', res._id);
-
-        // Clear cart after order
-        this.cart.clear();
-
-        this.router.navigate(['/customer/track']);
-      });
-
-    });
+        this.api.placeOrder(orderData).subscribe({
+          next: (res: any) => {
+            localStorage.setItem("orderId", res._id);
+            this.cart.clear();
+            this.toast.success("Order placed! Track it live.");
+            this.router.navigate(["/customer/track"]);
+          },
+          error: (err) => {
+            const msg =
+              err.error?.error?.message ?? err.message ?? "Could not place order";
+            this.toast.error(msg);
+          },
+        });
+      },
+      () => {
+        this.toast.error("Allow location access to deliver to your address.");
+      },
+      { enableHighAccuracy: true, timeout: 12000 },
+    );
   }
 }

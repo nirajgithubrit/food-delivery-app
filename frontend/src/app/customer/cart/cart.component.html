@@ -1,95 +1,129 @@
-<div class="min-h-screen bg-gray-50 p-4 md:p-6">
-  <div class="max-w-6xl mx-auto">
-    <!-- Title -->
-    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
-      🛒 Your Cart
-    </h1>
-
-    <!-- Empty Cart -->
-    <div *ngIf="!cartItems.length" class="text-center py-20">
-      <p class="text-gray-500 text-lg">Your cart is empty</p>
-      <button
-        routerLink="/customer/menu"
-        class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Browse Menu
-      </button>
+<section class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+  <div class="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-brand-600">
+        Checkout
+      </p>
+      <h1 class="font-display text-2xl font-bold sm:text-3xl">Your cart</h1>
     </div>
-
-    <!-- Content -->
-    <div *ngIf="cartItems.length" class="grid md:grid-cols-3 gap-6">
-      <!-- Items -->
-      <div class="md:col-span-2 space-y-4">
-        <div
-          *ngFor="let item of cartItems"
-          class="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between"
-        >
-          <!-- Left -->
-          <div>
-            <h2 class="font-semibold text-gray-800">
-              {{ item.name }}
-            </h2>
-
-            <p class="text-sm text-gray-500">₹{{ item.price }} each</p>
-          </div>
-
-          <!-- Right -->
-          <div class="flex items-center gap-4">
-            <!-- Quantity -->
-            <div class="flex items-center border rounded-lg overflow-hidden">
-              <button
-                (click)="decrease(item)"
-                class="px-3 py-1 bg-gray-100 hover:bg-gray-200"
-              >
-                −
-              </button>
-
-              <span class="px-3">{{ item.qty }}</span>
-
-              <button
-                (click)="increase(item)"
-                class="px-3 py-1 bg-blue-600 text-white hover:bg-blue-700"
-              >
-                +
-              </button>
-            </div>
-
-            <!-- Price -->
-            <p class="font-semibold text-gray-800 w-16 text-right">
-              ₹{{ item.price * item.qty }}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Summary -->
-      <div class="bg-white rounded-xl shadow-sm p-5 h-fit sticky top-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Order Summary</h3>
-
-        <div class="flex justify-between text-gray-600 mb-2">
-          <span>Items Total</span>
-          <span>₹{{ getTotal() }}</span>
-        </div>
-
-        <div class="flex justify-between text-gray-600 mb-2">
-          <span>Delivery</span>
-          <span class="text-green-600">Free</span>
-        </div>
-
-        <hr class="my-3" />
-
-        <div class="flex justify-between font-bold text-gray-800 text-lg">
-          <span>Total</span>
-          <span>₹{{ getTotal() }}</span>
-        </div>
-
-        <button
-          (click)="placeOrder()"
-          class="mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition"
-        >
-          Place Order
-        </button>
-      </div>
-    </div>
+    <ui-button variant="ghost" size="sm" link="/customer/menu">
+      ← Back to menu
+    </ui-button>
   </div>
-</div>
+
+  @if (cartItems().length === 0) {
+    <ui-empty-state
+      icon="🛒"
+      title="Cart is empty"
+      description="Browse the menu and add dishes you love — we'll keep them warm for checkout."
+    >
+      <ui-button variant="primary" [block]="true" link="/customer/menu">
+        Explore menu
+      </ui-button>
+    </ui-empty-state>
+  } @else {
+    <div class="grid gap-6 lg:grid-cols-3">
+      <div class="space-y-4 lg:col-span-2">
+        @for (item of cartItems(); track item._id) {
+          <ui-card class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">
+                {{ item.name }}
+              </h2>
+              <p class="text-sm text-slate-500 dark:text-slate-400">
+                ₹{{ item.price }} each
+              </p>
+            </div>
+            <div class="flex items-center gap-4">
+              <div
+                class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800"
+              >
+                <button
+                  type="button"
+                  class="focus-ring flex h-9 w-9 items-center justify-center rounded-xl bg-white text-lg dark:bg-slate-900"
+                  (click)="decrease(item)"
+                  [attr.aria-label]="'Remove one ' + item.name"
+                >
+                  −
+                </button>
+                <span class="min-w-[1.5rem] text-center text-sm font-semibold">{{
+                  item.qty
+                }}</span>
+                <button
+                  type="button"
+                  class="focus-ring flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-orange-500 text-lg text-white"
+                  (click)="increase(item)"
+                  [attr.aria-label]="'Add one ' + item.name"
+                >
+                  +
+                </button>
+              </div>
+              <p class="w-20 text-right text-lg font-bold text-slate-900 dark:text-white">
+                ₹{{ item.price * item.qty }}
+              </p>
+            </div>
+          </ui-card>
+        }
+      </div>
+
+      <ui-card padding="lg" class="h-fit lg:sticky lg:top-24">
+        <h3 class="font-display text-lg font-semibold">Order summary</h3>
+        <div class="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+          <div class="flex justify-between">
+            <span>Items</span>
+            <span class="font-semibold">₹{{ total() }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Delivery</span>
+            <span class="font-semibold text-emerald-600">Free</span>
+          </div>
+        </div>
+        <hr class="my-4 border-slate-200 dark:border-slate-700" />
+        <div class="flex justify-between text-lg font-bold">
+          <span>Total</span>
+          <span>₹{{ total() }}</span>
+        </div>
+
+        <p class="mt-6 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Payment
+        </p>
+        <div class="mt-3 grid gap-2">
+          <label
+            class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium transition hover:border-brand-400 dark:border-slate-700"
+            [class.border-brand-500]="paymentMethod() === 'cod'"
+            [class.bg-brand-50]="paymentMethod() === 'cod'"
+            [class.dark:bg-slate-800]="paymentMethod() === 'cod'"
+          >
+            <input
+              type="radio"
+              name="pay"
+              class="accent-brand-600"
+              [checked]="paymentMethod() === 'cod'"
+              (change)="setPay('cod')"
+            />
+            Cash on delivery
+          </label>
+          <label
+            class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium transition hover:border-brand-400 dark:border-slate-700"
+            [class.border-brand-500]="paymentMethod() === 'upi'"
+            [class.bg-brand-50]="paymentMethod() === 'upi'"
+            [class.dark:bg-slate-800]="paymentMethod() === 'upi'"
+          >
+            <input
+              type="radio"
+              name="pay"
+              class="accent-brand-600"
+              [checked]="paymentMethod() === 'upi'"
+              (change)="setPay('upi')"
+            />
+            UPI (verify at delivery)
+          </label>
+        </div>
+
+        <ui-button variant="primary" class="mt-6" [block]="true" (click)="placeOrder()">
+          Place order
+        </ui-button>
+      </ui-card>
+    </div>
+  }
+</section>

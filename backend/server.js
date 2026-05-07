@@ -1,72 +1,78 @@
+const dotenv = require("dotenv");
+const path = require("path");
+
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const http = require("http");
+const pinoHttp = require("pino-http");
+
+const config = require("./config");
+const logger = require("./utils/logger");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const { createSocketAuthMiddleware } = require("./middleware/socketAuth");
+const { registerSocketHandlers } = require("./sockets/handlers");
 
 const itemRoutes = require("./routes/itemRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const authRoutes = require("./routes/authRoutes");
-const Order = require("./models/order");
 
 const app = express();
-const http = require("http");
 const server = http.createServer(app);
 
+if (config.nodeEnv === "production") {
+  app.set("trust proxy", 1);
+}
+
+app.use(
+  pinoHttp({
+    logger,
+    autoLogging: { ignore: (req) => req.url === "/health" },
+  }),
+);
+
 const io = require("socket.io")(server, {
-  cors: { origin: "http://localhost:4200", credentials: true },
+  cors: {
+    origin: config.allowedOrigins,
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
 });
+
+io.use(createSocketAuthMiddleware());
+registerSocketHandlers(io);
+
+app.set("io", io);
 
 app.use(
   cors({
-    origin: "http://localhost:4200",
+    origin(origin, callback) {
+      if (!origin || config.allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-// SOCKET
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
-  // ✅ JOIN ROOM
-  socket.on("join-order", (orderId) => {
-    socket.join(orderId);
-    console.log(`📦 Joined room: ${orderId}`);
-  });
-
-  socket.on("join-delivery", (id) => {
-    socket.join(id);
-    console.log(`📦 Joined Delivery: ${id}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-
-  // 🔥 RECEIVE FROM DELIVERY
-  socket.on("send-location", async (data) => {
-    const { orderId, lat, lng } = data;
-
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      {
-        deliveryLocation: { lat, lng },
-      },
-      { returnDocument: "after" },
-    );
-    // 🔥 send ONLY location update
-    io.to(orderId).emit("location-update", order);
-  });
+app.get("/health", (req, res) => {
+  res.status(200).json({ ok: true });
 });
 
-app.set("io", io);
-
-// ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/orders", orderRoutes);
 
-server.listen(3000, () => {
-  console.log("Server running on port 3000");
+app.use(notFound);
+app.use(errorHandler);
+
+server.listen(config.port, () => {
+  logger.info({ msg: "Server listening", port: config.port, env: config.nodeEnv });
 });

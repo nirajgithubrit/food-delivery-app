@@ -33,6 +33,7 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   orderId: string | null = null;
   watchId: any;
   isTracking = false;
+  isArrived = false
 
 
   constructor(
@@ -54,15 +55,15 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     // 🧹 CLEAN OLD LISTENERS
     this.socket.off('new-order');
     this.socket.off('order-updated');
+    this.socket.off('order-removed');
 
     // 🔥 NEW ORDER COMING (ASSIGN)
     this.socket.listen('new-order', (order: any) => {
 
-      console.log('🆕 New order:', order);
+      // ❌ if already assigned → ignore
+      if (order.deliveryBoyId) return;
 
-      const exists = this.newOrders.some(o => o._id === order._id);
-
-      if (!exists) {
+      if (!this.newOrders.some(o => o._id === order._id)) {
         this.newOrders.push(order);
       }
     });
@@ -70,17 +71,57 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     // 🔥 ORDER UPDATE
     this.socket.listen('order-updated', (order: any) => {
 
+      const myId = localStorage.getItem('deliveryUser');
       if (!myId) return;
 
-      if (order.deliveryBoyId?.toString() !== myId.toString()) return;
+      // ===============================
+      // 🔥 CASE 1: NOT ASSIGNED (POOL ORDERS)
+      // ===============================
+      if (!order.deliveryBoyId) {
+        const id = String(order._id);
+        if (order.status === "pending" || order.status === "confirmed") {
+          const ix = this.newOrders.findIndex((o) => String(o._id) === id);
+          const next = [...this.newOrders];
+          if (ix > -1) {
+            next[ix] = order;
+          } else {
+            next.push(order);
+          }
+          this.newOrders = next;
+        } else {
+          // rejected / terminal — remove from rider offer pool
+          this.newOrders = this.newOrders.filter((o) => String(o._id) !== id);
+        }
+        return;
+      }
 
-      // ❌ REMOVE COMPLETED
+      // ===============================
+      // ❌ CASE 2: ASSIGNED TO OTHER RIDER
+      // ===============================
+      if (order.deliveryBoyId.toString() !== myId.toString()) {
+        return;
+      }
+
+      // Assigned to me but cancelled/rejected by restaurant
+      if (order.status === "rejected") {
+        this.newOrders = this.newOrders.filter((o) => String(o._id) !== String(order._id));
+        this.ordersQueue = this.ordersQueue.filter((o) => String(o._id) !== String(order._id));
+        if (String(this.orderId) === String(order._id)) {
+          this.finishOrder(String(order._id));
+        }
+        return;
+      }
+
+      // remove from new orders
+      this.newOrders = this.newOrders.filter(o => o._id !== order._id);
+
+      // remove completed
       if (order.status === 'completed') {
         this.finishOrder(order._id);
         return;
       }
 
-      // ✅ UPDATE QUEUE
+      // update queue
       const index = this.ordersQueue.findIndex(o => o._id === order._id);
 
       if (index > -1) {
@@ -89,9 +130,19 @@ export class DeliveryComponent implements OnInit, OnDestroy {
         this.ordersQueue.push(order);
       }
 
-      // 🚀 START ACTIVE ORDER
+      // start tracking only for MY order
       if (order.status === 'inprogress') {
         this.startOrder(order);
+      }
+    });
+
+    // ORDER REMOVED
+    this.socket.listen('order-removed', (orderId: unknown) => {
+      const id = String(orderId);
+      this.newOrders = this.newOrders.filter((o) => String(o._id) !== id);
+      this.ordersQueue = this.ordersQueue.filter((o) => String(o._id) !== id);
+      if (this.orderId != null && String(this.orderId) === id) {
+        this.finishOrder(id);
       }
     });
 
@@ -120,21 +171,24 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   // 📦 INITIAL LOAD
   loadAssignedOrders() {
 
-    this.api.getOrders().subscribe((orders: any) => {
+    this.api.getMyDeliveryOrders().subscribe((orders: any) => {
 
       const myId = localStorage.getItem('deliveryUser');
-      if (!myId) {
-        console.error('❌ Delivery user not logged in');
-        return;
-      }
+      if (!myId) return;
 
-      this.socket.emit('join-delivery', myId);
-
-      this.ordersQueue = orders.filter((o: any) =>
-        o.deliveryBoyId?.toString() === myId &&
-        o.status !== 'completed'
+      // ✅ 1. LOAD NEW ORDERS (UNASSIGNED)
+      this.newOrders = orders.filter((o: any) =>
+        !o.deliveryBoyId && (o.status === 'pending' || o.status === 'confirmed')
       );
 
+      // ✅ 2. LOAD MY ASSIGNED ORDERS
+      this.ordersQueue = orders.filter((o: any) =>
+        o.deliveryBoyId?.toString() === myId &&
+        o.status !== 'completed' &&
+        o.status !== 'rejected'
+      );
+
+      // ✅ 3. START ACTIVE ORDER
       const active = this.ordersQueue.find(o => o.status === 'inprogress');
 
       if (active) {
@@ -146,21 +200,32 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   // ✅ ACCEPT ORDER
   acceptOrder(order: any) {
 
-    console.log('✅ Accepted:', order._id);
-
     const deliveryBoyId = localStorage.getItem('deliveryUser');
+    if (!deliveryBoyId) {
+      console.warn('[acceptOrder] missing deliveryUser in localStorage');
+      return;
+    }
 
-    this.api.assignDelivery(order._id, deliveryBoyId).subscribe(() => {
+    const orderId = order?._id != null ? String(order._id) : '';
+    if (!orderId) return;
 
-      this.newOrders = this.newOrders.filter(o => o._id !== order._id);
+    console.log('✅ Accepted:', orderId, 'rider:', deliveryBoyId);
+
+    this.api.assignDelivery(orderId, deliveryBoyId).subscribe({
+      next: () => {
+        this.newOrders = this.newOrders.filter(o => String(o._id) !== orderId);
+      },
+      error: (err) => {
+        const msg = err.error?.error?.message ?? err.message ?? 'Accept failed';
+        console.error('[acceptOrder] API error', err);
+        alert(msg);
+      },
     });
   }
 
   // ❌ REJECT ORDER
   rejectOrder(order: any) {
-
-    console.log('❌ Rejected:', order._id);
-
+    this.api.rejectOrder(order._id).subscribe();
     this.newOrders = this.newOrders.filter(o => o._id !== order._id);
   }
 
@@ -251,47 +316,14 @@ export class DeliveryComponent implements OnInit, OnDestroy {
         }
 
         const distance = this.getDistance(current, this.target);
-
         console.log('📏 Distance:', distance);
-
         const isNear = distance < 0.001; // 🔥 increased threshold
 
-        // =========================
-        // 🍽️ PICKUP
-        // =========================
         if (
           isNear &&
-          this.currentOrder.pickupStatus === 'pending' &&
-          !isPicked
+          this.currentOrder.pickupStatus === 'picked'
         ) {
-
-          console.log('📦 Picked from restaurant');
-
-          isPicked = true;
-
-          this.api.updatePickupStatus(this.orderId!).subscribe();
-
-          this.currentOrder.pickupStatus = 'picked';
-
-          this.target = this.customer;
-
-          this.updateRoute();
-        }
-
-        // =========================
-        // 🏠 COMPLETE DELIVERY
-        // =========================
-        if (
-          isNear &&
-          this.currentOrder.pickupStatus === 'picked' &&
-          !isCompleted
-        ) {
-
-          console.log('🏁 Delivered');
-
-          isCompleted = true;
-
-          this.completeOrder();
+          this.isArrived = true;
         }
 
       },
@@ -304,22 +336,61 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     );
   }
 
+  markPicked() {
+    if (!this.orderId) return;
+
+    this.api.updatePickupStatus(this.orderId).subscribe(() => {
+      this.currentOrder.pickupStatus = 'picked';
+
+      this.target = this.customer;
+      this.updateRoute();
+    });
+  }
+
+  confirmUpiReceived() {
+    if (!this.orderId) return;
+    this.api.verifyPayment(this.orderId).subscribe({
+      next: (order: any) => {
+        if (this.currentOrder && String(this.currentOrder._id) === String(order._id)) {
+          this.currentOrder = { ...this.currentOrder, ...order };
+        }
+      },
+      error: (err) => {
+        const msg = err.error?.error?.message ?? err.message ?? 'Verification failed';
+        alert(msg);
+      },
+    });
+  }
+
   // ✅ COMPLETE ORDER
   completeOrder() {
 
-    if (!this.orderId) return;
+    if (!this.orderId || !this.currentOrder) return;
 
-    this.api.updateOrder(this.orderId, 'completed').subscribe(() => {
-      this.finishOrder(this.orderId!);
+    if (
+      this.currentOrder.paymentMethod === 'upi' &&
+      this.currentOrder.paymentStatus !== 'verified'
+    ) {
+      alert('Confirm UPI payment before completing the order.');
+      return;
+    }
+
+    this.api.updateOrder(this.orderId, 'completed').subscribe({
+      next: () => this.finishOrder(this.orderId!),
+      error: (err) => {
+        const msg = err.error?.error?.message ?? err.message ?? 'Could not complete order';
+        alert(msg);
+      },
     });
   }
 
   // 🔄 FINISH
   finishOrder(orderId: string) {
 
+    this.isArrived = false
     this.stopTracking();
 
-    this.ordersQueue = this.ordersQueue.filter(o => o._id !== orderId);
+    this.ordersQueue = this.ordersQueue.filter(o => String(o._id) !== String(orderId));
 
     this.currentOrder = null;
     this.orderId = null;
@@ -345,5 +416,6 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     this.stopTracking();
     this.socket.off('order-updated');
     this.socket.off('new-order');
+    this.socket.off('order-removed');
   }
 }

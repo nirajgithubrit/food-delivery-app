@@ -1,85 +1,112 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { ApiService } from '../../services/api.service';
-import { CommonModule } from '@angular/common';
-import { SocketService } from '../../services/socket.service';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  signal,
+} from "@angular/core";
+import { ApiService } from "../../services/api.service";
+import { SocketService } from "../../services/socket.service";
+import { ToastService } from "../../shared/services/toast.service";
+import { CommonModule } from "@angular/common";
+import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
+import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
+import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
 
 @Component({
-  selector: 'app-orders',
+  selector: "app-orders",
   standalone: true,
-  imports: [CommonModule],
-  templateUrl: './orders.component.html',
-  styleUrl: './orders.component.scss'
+  imports: [CommonModule, UiButtonComponent, UiCardComponent, UiSkeletonComponent],
+  templateUrl: "./orders.component.html",
+  styleUrl: "./orders.component.scss",
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrdersComponent implements OnInit, OnDestroy {
-  orders: any[] = [];
+  private readonly api = inject(ApiService);
+  private readonly socket = inject(SocketService);
+  private readonly toast = inject(ToastService);
 
-  constructor(private api: ApiService, private socket: SocketService) { }
+  readonly orders = signal<any[]>([]);
+  readonly loading = signal(true);
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.load();
 
-    this.socket.listen('new-order-admin', () => {
-      this.load(); // auto refresh
+    this.socket.listen("new-order-admin", () => {
+      this.load();
     });
 
-    this.socket.listen('order-updated', (updatedOrder: any) => {
-      const index = this.orders.findIndex(o => o._id === updatedOrder._id);
-
-      if (index > -1) {
-        this.orders[index] = updatedOrder; // ✅ realtime update
-      } else {
-        this.orders.unshift(updatedOrder);
-      }
-    });
-  }
-
-  load() {
-    this.api.getOrders().subscribe((res: any) => {
-      this.orders = res;
+    this.socket.listen("order-updated", (updatedOrder: any) => {
+      this.orders.update((list) => {
+        const index = list.findIndex(
+          (o) => String(o._id) === String(updatedOrder._id),
+        );
+        if (index > -1) {
+          const next = [...list];
+          next[index] = updatedOrder;
+          return next;
+        }
+        return [updatedOrder, ...list];
+      });
     });
   }
 
-  update(order: any, status: string) {
-    this.api.updateOrder(order._id, status).subscribe(() => {
-
+  load(): void {
+    this.loading.set(true);
+    this.api.getOrders().subscribe({
+      next: (res: any) => {
+        this.orders.set(res ?? []);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.toast.error("Could not load orders.");
+      },
     });
   }
 
-  // 🚴 ASSIGN DELIVERY
-  assign(order: any) {
+  update(order: any, status: string): void {
+    this.api.updateOrder(order._id, status).subscribe({
+      next: () => this.toast.success(`Order updated to ${status}`),
+      error: (err) => {
+        const msg =
+          err.error?.error?.message ?? err.message ?? "Update failed";
+        this.toast.error(msg);
+      },
+    });
+  }
 
-    const deliveryBoyId = prompt('Enter Delivery Boy ID');
-
+  assign(order: any): void {
+    const deliveryBoyId = prompt("Enter delivery boy user ID");
     if (!deliveryBoyId) return;
-
-    this.api.assignDelivery(order._id, deliveryBoyId).subscribe();
+    this.api.assignDelivery(order._id, deliveryBoyId).subscribe({
+      next: () => this.toast.success("Rider assigned"),
+      error: (err) => {
+        const msg =
+          err.error?.error?.message ?? err.message ?? "Assign failed";
+        this.toast.error(msg);
+      },
+    });
   }
 
-  ngOnDestroy() {
-    this.socket.socket.off('new-order');
-    this.socket.socket.off('order-updated');
+  ngOnDestroy(): void {
+    this.socket.socket.off("new-order-admin");
+    this.socket.socket.off("order-updated");
   }
 
   isDisabled(order: any, action: string): boolean {
-
     const status = order.status;
-
-    if (status === 'completed' || status === 'rejected') return true;
-
+    if (status === "completed" || status === "rejected") return true;
     switch (action) {
-
-      case 'confirm':
-        return status !== 'pending';
-
-      case 'progress':
-        return status !== 'confirmed';
-
-      case 'done':
-        return status !== 'inprogress';
-
-      case 'reject':
-        return status !== 'pending';
-
+      case "confirm":
+        return status !== "pending";
+      case "progress":
+        return status !== "confirmed";
+      case "done":
+        return status !== "inprogress";
+      case "reject":
+        return status !== "pending";
       default:
         return false;
     }
