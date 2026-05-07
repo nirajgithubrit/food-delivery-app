@@ -4,11 +4,12 @@ import { ApiService } from '../../services/api.service';
 import { CommonModule } from '@angular/common';
 import { GoogleMapsModule } from '@angular/google-maps';
 import { ToastService } from '../../shared/services/toast.service';
+import { LogoutButtonComponent } from '../../shared/ui/logout-button/logout-button.component';
 
 @Component({
   selector: 'app-delivery',
   standalone: true,
-  imports: [CommonModule, GoogleMapsModule],
+  imports: [CommonModule, GoogleMapsModule, LogoutButtonComponent],
   templateUrl: './delivery.component.html',
   styleUrl: './delivery.component.scss'
 })
@@ -37,6 +38,20 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   isArrived = false
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private readonly reconnectHandler = () => this.loadAssignedOrders();
+
+  // 👤 PROFILE
+  readonly riderName: string = (typeof localStorage !== 'undefined'
+    ? localStorage.getItem('deliveryName') || ''
+    : '').trim();
+
+  /** Total visible jobs across all panels — used in header summary chip. */
+  get activeCount(): number {
+    return (
+      this.newOrders.length +
+      this.ordersQueue.length +
+      (this.currentOrder ? 1 : 0)
+    );
+  }
 
 
   constructor(

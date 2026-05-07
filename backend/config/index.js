@@ -26,5 +26,7 @@ module.exports = {
   restaurant: {
     lat: Number(process.env.RESTAURANT_LAT) || 22.721585,
     lng: Number(process.env.RESTAURANT_LNG) || 71.647064,
+    name: process.env.RESTAURANT_NAME || "Gir Gamathi",
+    phone: process.env.RESTAURANT_PHONE || "",
   },
 };

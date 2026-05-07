@@ -4,13 +4,16 @@
   overflow: hidden;
 }
 
-.track-sheet-body {
+.track-shell {
   -webkit-overflow-scrolling: touch;
-  transition: max-height 220ms ease;
 }
 
-.track-map-card google-map {
+/* Make sure the embedded map fills its sized parent. */
+.track-map-card google-map,
+.track-map-card google-map > div {
   display: block;
+  height: 100% !important;
+  width: 100% !important;
 }
 
 .track-timeline {

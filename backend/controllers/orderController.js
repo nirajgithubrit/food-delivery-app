@@ -51,7 +51,36 @@ exports.getCustomerOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find({ userId: String(req.user.id) })
     .sort({ createdAt: -1 })
     .lean();
-  ApiResponse.success(res, orders);
+
+  // Collect distinct rider ids that are valid ObjectIds, then attach rider info.
+  const riderIds = [
+    ...new Set(
+      orders
+        .map((o) => o.deliveryBoyId)
+        .filter((id) => id && /^[0-9a-fA-F]{24}$/.test(String(id))),
+    ),
+  ];
+
+  let ridersById = {};
+  if (riderIds.length > 0) {
+    const riders = await User.find(
+      { _id: { $in: riderIds } },
+      { name: 1, phone: 1 },
+    ).lean();
+    ridersById = riders.reduce((acc, r) => {
+      acc[String(r._id)] = { name: r.name || "", phone: r.phone || "" };
+      return acc;
+    }, {});
+  }
+
+  const enriched = orders.map((o) => ({
+    ...o,
+    deliveryBoy: o.deliveryBoyId ? ridersById[String(o.deliveryBoyId)] || null : null,
+    restaurantName: config.restaurant.name,
+    restaurantPhone: config.restaurant.phone,
+  }));
+
+  ApiResponse.success(res, enriched);
 });
 
 exports.getDeliveryOrders = asyncHandler(async (req, res) => {

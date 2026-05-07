@@ -4,6 +4,7 @@ import {
   NgZone,
   OnDestroy,
   OnInit,
+  computed,
   inject,
   signal,
 } from "@angular/core";
@@ -39,7 +40,6 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
 
   readonly order = signal<any | null>(null);
   readonly loading = signal(true);
-  readonly sheetOpen = signal(true);
 
   center = signal<google.maps.LatLngLiteral>({ lat: 0, lng: 0 });
   markerPosition = signal<google.maps.LatLngLiteral>({ lat: 0, lng: 0 });
@@ -63,6 +63,7 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
   isNear = signal(false);
   private prevStatus = "";
   private prevPickupStatus = "";
+  private prevRiderId: string | null = null;
 
   readonly mapUiOptions: google.maps.MapOptions = {
     disableDefaultUI: true,
@@ -76,12 +77,56 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
     anchor: new google.maps.Point(22, 22),
   };
 
+  /** Current step index for the timeline, exposed for templates that can't see the `as` alias. */
+  readonly currentStepIndex = computed(() => this.getStepIndex(this.order()?.status));
+
+  /** Footer with rider details only makes sense for active orders (not rejected, not completed). */
+  readonly hasFooter = computed(() => {
+    const o = this.order();
+    return !!o && o.status !== "rejected" && o.status !== "completed";
+  });
+
+  /** True once the order is marked delivered. */
+  readonly isDelivered = computed(() => this.order()?.status === "completed");
+
+  /** Clear the saved order id so refreshing returns to the menu cleanly. */
+  clearSavedOrder(): void {
+    try {
+      localStorage.removeItem("orderId");
+    } catch {
+      /* no-op */
+    }
+  }
+
+  /** Rider's display name with sensible fallback. */
+  readonly riderName = computed(() => {
+    const o = this.order();
+    if (!o) return "Awaiting partner";
+    const name = o?.deliveryBoy?.name?.trim();
+    if (name) return name;
+    if (o.deliveryBoyId) return "Delivery partner";
+    return "Searching for rider…";
+  });
+
+  /** Rider phone for tel: link (empty string when unknown). */
+  readonly riderPhone = computed(() => this.order()?.deliveryBoy?.phone || "");
+
+  /** Show restaurant call card before pickup happens. */
+  readonly showRestaurantCall = computed(() => {
+    const o = this.order();
+    if (!o) return false;
+    if (o.status === "completed" || o.status === "rejected") return false;
+    return o.pickupStatus !== "picked";
+  });
+
   ngOnInit(): void {
     this.socket.listen("order-updated", (data: any) => {
       if (String(data._id) !== String(this.order()?._id)) return;
 
       const statusChanged = this.prevStatus !== data.status;
       const pickupChanged = this.prevPickupStatus !== data.pickupStatus;
+      const riderChanged =
+        String(this.prevRiderId ?? "") !== String(data.deliveryBoyId ?? "");
 
       if (data.status === "rejected" && statusChanged) {
         this.toast.error(
@@ -95,7 +140,22 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
 
       this.prevStatus = data.status;
       this.prevPickupStatus = data.pickupStatus;
-      this.order.set(data);
+      this.prevRiderId = data.deliveryBoyId ?? null;
+
+      // Preserve enriched fields (deliveryBoy, restaurantPhone) from the
+      // initial fetch since socket payloads don't include them.
+      const prev = this.order();
+      this.order.set({
+        ...data,
+        deliveryBoy: prev?.deliveryBoy ?? null,
+        restaurantName: prev?.restaurantName,
+        restaurantPhone: prev?.restaurantPhone,
+      });
+
+      // Rider just got assigned (or changed) — refetch to pick up rider name/phone.
+      if (riderChanged && data.deliveryBoyId) {
+        this.refreshOrderEnrichment();
+      }
     });
 
     this.socket.listen("location-update", (ord: any) => {
@@ -146,6 +206,7 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
 
         this.prevStatus = o.status ?? "";
         this.prevPickupStatus = o.pickupStatus ?? "";
+        this.prevRiderId = o.deliveryBoyId ?? null;
 
         this.socket.emit("join-order", o._id);
 
@@ -174,6 +235,22 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Re-fetch order list quietly to update enriched rider info after assignment. */
+  private refreshOrderEnrichment(): void {
+    const currentId = this.order()?._id;
+    if (!currentId) return;
+
+    this.api.getCustomerOrders().subscribe({
+      next: (orders: any[]) => {
+        const fresh = orders?.find((o) => String(o._id) === String(currentId));
+        if (!fresh) return;
+        // Merge so we don't clobber map-driven fields.
+        const prev = this.order();
+        this.order.set({ ...prev, ...fresh });
+      },
+    });
+  }
+
   /** Active step index for timeline; -1 when rejected */
   getStepIndex(status: string | undefined): number {
     if (!status || status === "rejected") return -1;
@@ -184,6 +261,44 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
     }
     if (status === "completed") return 4;
     return 0;
+  }
+
+  /** Human-readable label shown in header pill. */
+  statusLabel(o: any): string {
+    if (!o) return "";
+    switch (o.status) {
+      case "pending":
+        return "Pending";
+      case "confirmed":
+        return "Confirmed";
+      case "inprogress":
+        return o.pickupStatus === "picked" ? "On the way" : "Preparing";
+      case "completed":
+        return "Delivered";
+      case "rejected":
+        return "Declined";
+      default:
+        return "Updating";
+    }
+  }
+
+  /** One-line description of current status used under ETA / status card. */
+  statusHint(o: any): string {
+    if (!o) return "";
+    switch (o.status) {
+      case "pending":
+        return "Waiting for the restaurant to confirm…";
+      case "confirmed":
+        return "Accepted. A rider will pick up your order soon.";
+      case "inprogress":
+        return o.pickupStatus === "picked"
+          ? "Rider is bringing your order to you."
+          : "Rider is on the way to the restaurant.";
+      case "completed":
+        return "Delivered. Enjoy your meal!";
+      default:
+        return "Updating…";
+    }
   }
 
   getRoute(
@@ -214,10 +329,6 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
     const dx = a.lat - b.lat;
     const dy = a.lng - b.lng;
     return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  toggleSheet(): void {
-    this.sheetOpen.update((v) => !v);
   }
 
   ngOnDestroy(): void {

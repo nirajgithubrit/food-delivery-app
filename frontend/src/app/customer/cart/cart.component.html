@@ -4,7 +4,7 @@
       <p class="text-xs font-semibold uppercase tracking-widest text-brand-600">
         Checkout
       </p>
-      <h1 class="font-display text-2xl font-bold sm:text-3xl">Your cart</h1>
+      <h2 class="font-display text-2xl font-bold sm:text-3xl">Your cart</h2>
     </div>
     <a
       routerLink="/customer/menu"
@@ -40,9 +40,9 @@
                 loading="lazy"
               />
               <div class="min-w-0">
-                <h2 class="truncate font-display text-xl font-semibold text-slate-900 dark:text-white sm:text-lg">
+                <p class="truncate font-display text-xl font-semibold text-slate-900 dark:text-white sm:text-lg">
                   {{ item.name }}
-                </h2>
+                </p>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                   ₹{{ item.price }} each
                 </p>
@@ -65,7 +65,7 @@
                 }}</span>
                 <button
                   type="button"
-                  class="focus-ring flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-orange-500 text-lg text-white"
+                  class="focus-ring flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-lg text-white shadow-md shadow-emerald-500/30 ring-1 ring-emerald-600/20 transition hover:from-teal-400 hover:to-emerald-500 hover:shadow-lg hover:shadow-emerald-500/40 active:scale-95"
                   (click)="increase(item)"
                   [attr.aria-label]="'Add one ' + item.name"
                 >

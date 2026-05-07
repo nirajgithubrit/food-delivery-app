@@ -73,8 +73,12 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/auth/admin`, { email, password }, { withCredentials: true });
   }
 
-  loginDelivery(phone: string) {
-    return this.http.post(`${this.baseUrl}/auth/delivery`, { phone }, { withCredentials: true });
+  loginDelivery(phone: string, name: string) {
+    return this.http.post(
+      `${this.baseUrl}/auth/delivery`,
+      { phone, name },
+      { withCredentials: true },
+    );
   }
 
   getMe() {

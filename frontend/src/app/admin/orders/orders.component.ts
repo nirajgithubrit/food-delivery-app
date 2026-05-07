@@ -13,11 +13,18 @@ import { CommonModule } from "@angular/common";
 import { RouterLink } from "@angular/router";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
+import { LogoutButtonComponent } from "../../shared/ui/logout-button/logout-button.component";
 
 @Component({
   selector: "app-orders",
   standalone: true,
-  imports: [CommonModule, RouterLink, UiCardComponent, UiSkeletonComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    UiCardComponent,
+    UiSkeletonComponent,
+    LogoutButtonComponent,
+  ],
   templateUrl: "./orders.component.html",
   styleUrl: "./orders.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,

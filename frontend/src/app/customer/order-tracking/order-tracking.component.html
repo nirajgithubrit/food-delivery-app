@@ -1,220 +1,388 @@
-<div
-  class="flex h-dvh flex-col overflow-hidden bg-slate-100/90 dark:bg-slate-950"
-  style="padding-bottom: env(safe-area-inset-bottom, 0px)"
->
-  <!-- Compact sticky header -->
+<div class="track-shell flex h-dvh flex-col bg-slate-50 dark:bg-slate-950">
+  <!-- Sticky header -->
   <header
-    class="sticky top-0 z-50 flex h-14 shrink-0 items-center border-b border-slate-200/90 bg-white/95 px-3 py-1 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95 sm:h-16 sm:px-4"
+    class="sticky top-0 z-40 shrink-0 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85"
   >
-    <div class="mx-auto flex w-full max-w-md items-center justify-between gap-2 sm:max-w-lg">
+    <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
       <div class="min-w-0">
-        <p class="truncate text-[10px] font-semibold uppercase tracking-wider text-brand-600">
+        <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-600">
           Live order
         </p>
-        <h1 class="truncate font-display text-sm font-bold leading-tight text-slate-900 dark:text-white sm:text-base">
-          Tracking
-        </h1>
-      </div>
-      @if (order(); as ord) {
-        <span
-          class="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 font-mono text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+        <p
+          class="truncate font-display text-base font-bold leading-tight text-slate-900 dark:text-white sm:text-lg"
         >
-          #{{ ord._id?.toString().slice(-5) }}
-        </span>
-      }
+          Order tracking
+      </p>
+      </div>
+
+      <div class="hidden items-center gap-2 sm:flex">
+        @if (order(); as ord) {
+          <span
+            class="shrink-0 rounded-full bg-slate-100 px-3 py-1 font-mono text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          >
+            #{{ ord._id?.toString().slice(-6) }}
+          </span>
+          <span
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+            [class.bg-amber-50]="ord.status === 'pending'"
+            [class.text-amber-700]="ord.status === 'pending'"
+            [class.dark:bg-amber-950]="ord.status === 'pending'"
+            [class.dark:text-amber-200]="ord.status === 'pending'"
+            [class.bg-sky-50]="ord.status === 'confirmed'"
+            [class.text-sky-700]="ord.status === 'confirmed'"
+            [class.dark:bg-sky-950]="ord.status === 'confirmed'"
+            [class.dark:text-sky-200]="ord.status === 'confirmed'"
+            [class.bg-emerald-50]="ord.status === 'inprogress' || ord.status === 'completed'"
+            [class.text-emerald-700]="ord.status === 'inprogress' || ord.status === 'completed'"
+            [class.dark:bg-emerald-950]="ord.status === 'inprogress' || ord.status === 'completed'"
+            [class.dark:text-emerald-200]="ord.status === 'inprogress' || ord.status === 'completed'"
+            [class.bg-rose-50]="ord.status === 'rejected'"
+            [class.text-rose-700]="ord.status === 'rejected'"
+            [class.dark:bg-rose-950]="ord.status === 'rejected'"
+            [class.dark:text-rose-200]="ord.status === 'rejected'"
+          >
+            <span
+              class="h-1.5 w-1.5 rounded-full"
+              [class.bg-amber-500]="ord.status === 'pending'"
+              [class.bg-sky-500]="ord.status === 'confirmed'"
+              [class.bg-emerald-500]="ord.status === 'inprogress' || ord.status === 'completed'"
+              [class.bg-rose-500]="ord.status === 'rejected'"
+            ></span>
+            {{ statusLabel(ord) }}
+          </span>
+        }
+      </div>
     </div>
   </header>
 
-  <!-- Map card: below header, never underlap -->
-  <div class="shrink-0 px-3 pt-3 sm:px-4 sm:pt-4">
-    <div
-      class="track-map-card relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-200 shadow-md dark:border-slate-700 dark:bg-slate-800 sm:max-w-lg"
-    >
-      @if (!loading() && order(); as o) {
-        @if (o.status !== "rejected") {
-          <google-map
-            height="220px"
-            width="100%"
-            [center]="center()"
-            [zoom]="zoom"
-            [options]="mapUiOptions"
-          >
-            <map-marker [position]="markerPosition()" [icon]="bikeIcon"></map-marker>
-            <map-marker [position]="customerLocation()"></map-marker>
-            @if (directionsResults(); as dir) {
-              <map-directions-renderer [directions]="dir"></map-directions-renderer>
-            }
-          </google-map>
-        } @else {
-          <div
-            class="flex h-[220px] flex-col items-center justify-center gap-2 bg-slate-100 px-4 text-center dark:bg-slate-900"
-          >
-            <span class="text-2xl" aria-hidden="true">✕</span>
-            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Map unavailable — order was not accepted
-            </p>
+  <!-- Scrollable main content -->
+  <main class="min-h-0 flex-1 overflow-y-auto">
+    <div class="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+      @if (loading()) {
+        <div class="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+          <ui-skeleton height="280px" rounded="lg" class="block" />
+          <div class="space-y-4">
+            <ui-skeleton height="96px" rounded="lg" class="block" />
+            <ui-skeleton height="220px" rounded="lg" class="block" />
           </div>
-        }
-      } @else if (loading()) {
-        <div class="h-[220px] p-3">
-          <ui-skeleton height="100%" rounded="lg" class="block h-full" />
         </div>
-      } @else {
-        <div
-          class="flex h-[220px] items-center justify-center text-sm text-slate-500 dark:text-slate-400"
-        >
-          No order to display
-        </div>
-      }
-    </div>
-  </div>
-
-  <!-- Bottom panel: flex-1 scroll -->
-  <div
-    class="track-sheet mt-2 flex min-h-0 flex-1 flex-col rounded-t-3xl border border-b-0 border-slate-200/90 bg-white shadow-[0_-6px_24px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-none sm:mt-3"
-  >
-    <button
-      type="button"
-      class="focus-ring flex w-full shrink-0 items-center justify-center py-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-      (click)="toggleSheet()"
-      [attr.aria-expanded]="sheetOpen()"
-      aria-controls="track-sheet-body"
-    >
-      <span class="h-1 w-9 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden="true"></span>
-    </button>
-
-    <div
-      id="track-sheet-body"
-      class="track-sheet-body min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-5 pt-0 sm:px-4"
-      [class.max-h-[7.5rem]]="!sheetOpen()"
-      [class.overflow-hidden]="!sheetOpen()"
-    >
-      <div class="mx-auto flex max-w-md flex-col gap-3 sm:max-w-lg">
-        @if (order(); as o) {
-          @if (o.status === "rejected") {
-            <div
-              class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-900/60 dark:bg-rose-950/50 dark:text-rose-100"
-              role="alert"
-            >
-              <p class="font-semibold">Order declined</p>
-              <p class="mt-1 text-rose-800/90 dark:text-rose-200/90">
-                The restaurant could not accept this order. Try again or choose another time.
-              </p>
+      } @else if (order()) { @if (order(); as o) {
+        @if (o.status === "completed") {
+          <ui-card padding="lg" class="block">
+            <div class="flex flex-col items-center gap-4 text-center">
+              <div
+                class="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-4xl text-emerald-700 shadow-sm dark:from-emerald-900/60 dark:to-emerald-950/60 dark:text-emerald-200"
+                aria-hidden="true"
+              >
+                <span class="absolute inline-flex h-20 w-20 animate-ping rounded-3xl bg-emerald-300/40"></span>
+                <span class="relative">🎉</span>
+              </div>
+              <div class="max-w-md">
+                <p
+                  class="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400"
+                >
+                  Order delivered
+                </p>
+                <h2
+                  class="mt-1 font-display text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl"
+                >
+                  Enjoy your meal!
+                </h2>
+                <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  Order
+                  <span class="font-mono font-semibold">#{{ o._id?.toString().slice(-6) }}</span>
+                  has been delivered. Hungry again? Browse the menu.
+                </p>
+              </div>
+              <div class="flex w-full max-w-sm flex-col gap-2 sm:flex-row">
+                <a
+                  routerLink="/customer/menu"
+                  (click)="clearSavedOrder()"
+                  class="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:brightness-[1.04] hover:shadow-lift active:scale-[0.98] no-underline"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 12l2-2 7-7 7 7 2 2" />
+                    <path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10" />
+                  </svg>
+                  Back to menu
+                </a>
+              </div>
+            </div>
+          </ui-card>
+        } @else if (o.status === "rejected") {
+          <ui-card padding="lg" class="block">
+            <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <div
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-2xl text-rose-600 dark:bg-rose-950/60 dark:text-rose-300"
+                aria-hidden="true"
+              >
+                ✕
+              </div>
+              <div class="min-w-0 flex-1">
+                <h2 class="font-display text-lg font-bold text-slate-900 dark:text-white">
+                  Order declined
+                </h2>
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  The restaurant could not accept this order. You have not been charged.
+                </p>
+              </div>
               <a
                 routerLink="/customer/menu"
-                class="focus-ring mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.75rem] no-underline"
+                class="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] sm:w-auto no-underline"
               >
                 Back to menu
               </a>
             </div>
-          } @else {
-            @if (eta()) {
-              <ui-card padding="sm" class="flex items-center justify-between gap-3 !p-3 sm:!p-4">
-                <div class="min-w-0">
-                  <p
-                    class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+          </ui-card>
+        } @else {
+          <div class="grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-start lg:gap-6">
+            <!-- Map card -->
+            <div
+              class="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-glass backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/90 dark:shadow-none"
+            >
+              <div class="track-map-card relative h-[260px] sm:h-[320px] lg:h-[480px]">
+                <google-map
+                  height="100%"
+                  width="100%"
+                  [center]="center()"
+                  [zoom]="zoom"
+                  [options]="mapUiOptions"
+                >
+                  <map-marker [position]="markerPosition()" [icon]="bikeIcon"></map-marker>
+                  <map-marker [position]="customerLocation()"></map-marker>
+                  @if (directionsResults(); as dir) {
+                    <map-directions-renderer [directions]="dir"></map-directions-renderer>
+                  }
+                </google-map>
+
+                @if (eta()) {
+                  <div
+                    class="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-md backdrop-blur dark:bg-slate-900/90 dark:text-slate-100"
                   >
-                    {{ isNear() ? "Arriving" : "ETA" }}
-                  </p>
-                  <p
-                    class="truncate font-display text-xl font-bold text-emerald-600 dark:text-emerald-400 sm:text-2xl"
-                  >
-                    {{ eta() }}
-                  </p>
-                </div>
-                <div class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/50">
-                  @if (isNear()) {
                     <span
-                      class="absolute inline-flex h-10 w-10 rounded-full bg-emerald-400/60 animate-ping"
-                    ></span>
-                  }
-                  <span class="relative text-xl" aria-hidden="true">🛵</span>
-                </div>
-              </ui-card>
-            }
-          }
-
-          @if (o.status !== "rejected") {
-            <ui-card padding="sm" class="!p-3 sm:!p-4">
-              <h2 class="font-display text-sm font-semibold text-slate-900 dark:text-white">
-                Status
-              </h2>
-              <p class="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300 sm:text-sm">
-                @switch (o.status) {
-                  @case ("pending") {
-                    Waiting for the restaurant to confirm…
-                  }
-                  @case ("confirmed") {
-                    Accepted. A rider will pick up your order soon.
-                  }
-                  @case ("inprogress") {
-                    @if (o.pickupStatus === "pending") {
-                      Rider is on the way to the restaurant.
-                    } @else {
-                      Rider is bringing your order to you.
-                    }
-                  }
-                  @case ("completed") {
-                    Delivered. Enjoy your meal!
-                  }
-                  @default {
-                    Updating…
-                  }
-                }
-              </p>
-
-              <div class="track-timeline relative mt-4 space-y-0 pl-1">
-                @for (step of steps; track step.key; let i = $index; let last = $last) {
-                  <div class="relative flex gap-3 pb-5 last:pb-0">
-                    @if (!last) {
-                      <div
-                        class="absolute left-[9px] top-[18px] h-[calc(100%-6px)] w-0.5 rounded-full"
-                        [class.bg-emerald-500]="i < getStepIndex(o.status)"
-                        [class.bg-slate-200]="i >= getStepIndex(o.status)"
-                        [class.dark:bg-slate-700]="i >= getStepIndex(o.status)"
-                      ></div>
-                    }
-                    <div
-                      class="relative z-[1] mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white transition-colors duration-300"
-                      [class.bg-emerald-500]="i <= getStepIndex(o.status)"
-                      [class.bg-slate-300]="i > getStepIndex(o.status)"
-                      [class.dark:bg-slate-600]="i > getStepIndex(o.status)"
-                      [class.ring-2]="i === getStepIndex(o.status)"
-                      [class.ring-emerald-300]="i === getStepIndex(o.status)"
-                      [class.dark:ring-emerald-700]="i === getStepIndex(o.status)"
+                      class="relative flex h-2.5 w-2.5"
+                      [class.opacity-100]="isNear()"
                     >
-                      ✓
-                    </div>
-                    <div class="min-w-0 pt-0.5">
-                      <p
-                        class="text-xs font-semibold sm:text-sm"
-                        [class.text-emerald-600]="i <= getStepIndex(o.status)"
-                        [class.dark:text-emerald-400]="i <= getStepIndex(o.status)"
-                        [class.text-slate-400]="i > getStepIndex(o.status)"
-                      >
-                        {{ step.label }}
-                      </p>
-                      <p class="text-[10px] text-slate-400 sm:text-xs">
-                        {{ i <= getStepIndex(o.status) ? "Done" : "Upcoming" }}
-                      </p>
-                    </div>
+                      @if (isNear()) {
+                        <span
+                          class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
+                        ></span>
+                      }
+                      <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                    </span>
+                    <span class="font-mono">
+                      {{ isNear() ? "Arriving" : "ETA" }} · {{ eta() }}
+                    </span>
                   </div>
                 }
               </div>
-            </ui-card>
-          }
-        } @else if (!loading()) {
-          <ui-card padding="sm" class="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+            </div>
+
+            <!-- Right column: ETA + restaurant + status -->
+            <div class="flex flex-col gap-4">
+              <!-- ETA + Restaurant call -->
+              <ui-card padding="md" class="block">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p
+                      class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                    >
+                      {{ isNear() ? "Arriving" : "Estimated time" }}
+                    </p>
+                    <p
+                      class="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-400 sm:text-3xl"
+                    >
+                      {{ eta() || "—" }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      {{ statusHint(o) }}
+                    </p>
+                  </div>
+                  <div
+                    class="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/50"
+                  >
+                    @if (isNear()) {
+                      <span
+                        class="absolute inline-flex h-12 w-12 animate-ping rounded-full bg-emerald-400/60"
+                      ></span>
+                    }
+                    <span class="relative text-2xl" aria-hidden="true">🛵</span>
+                  </div>
+                </div>
+
+                @if (showRestaurantCall()) {
+                  <div
+                    class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/40"
+                  >
+                    <div class="flex min-w-0 items-center gap-3">
+                      <div
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-xl dark:bg-brand-950/40"
+                        aria-hidden="true"
+                      >
+                        🍽️
+                      </div>
+                      <div class="min-w-0">
+                        <p
+                          class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        >
+                          Restaurant
+                        </p>
+                        <p
+                          class="truncate text-sm font-semibold text-slate-900 dark:text-white"
+                        >
+                          {{ o.restaurantName || "Restaurant" }}
+                        </p>
+                      </div>
+                    </div>
+                    @if (o.restaurantPhone) {
+                      <a
+                        [href]="'tel:' + o.restaurantPhone"
+                        class="focus-ring inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-brand-600 px-3 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:bg-brand-700 active:scale-[0.98] no-underline"
+                        aria-label="Call restaurant"
+                      >
+                        <span aria-hidden="true">📞</span>
+                        <span>Call</span>
+                      </a>
+                    }
+                  </div>
+                }
+              </ui-card>
+
+              <!-- Status timeline -->
+              <ui-card padding="md" class="block">
+                <div class="flex items-center justify-between">
+                  <h3
+                    class="font-display text-base font-semibold text-slate-900 dark:text-white"
+                  >
+                    Order status
+                  </h3>
+                  <span
+                    class="rounded-full bg-slate-100 px-2.5 py-0.5 font-mono text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:hidden"
+                  >
+                    #{{ o._id?.toString().slice(-6) }}
+                  </span>
+                </div>
+                <p
+                  class="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300 sm:text-sm"
+                >
+                  {{ statusHint(o) }}
+                </p>
+
+                <div class="track-timeline relative mt-4 space-y-0 pl-1">
+                  @for (step of steps; track step.key; let i = $index; let last = $last) {
+                    <div class="relative flex gap-3 pb-5 last:pb-0">
+                      @if (!last) {
+                        <div
+                          class="absolute left-[10px] top-[20px] h-[calc(100%-8px)] w-0.5 rounded-full"
+                          [class.bg-emerald-500]="i < currentStepIndex()"
+                          [class.bg-slate-200]="i >= currentStepIndex()"
+                          [class.dark:bg-slate-700]="i >= currentStepIndex()"
+                        ></div>
+                      }
+                      <div
+                        class="relative z-[1] mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white transition-colors duration-300"
+                        [class.bg-emerald-500]="i <= currentStepIndex()"
+                        [class.bg-slate-300]="i > currentStepIndex()"
+                        [class.dark:bg-slate-600]="i > currentStepIndex()"
+                        [class.ring-4]="i === currentStepIndex()"
+                        [class.ring-emerald-200]="i === currentStepIndex()"
+                        [class.dark:ring-emerald-900]="i === currentStepIndex()"
+                      >
+                        ✓
+                      </div>
+                      <div class="min-w-0 pt-0.5">
+                        <p
+                          class="text-sm font-semibold"
+                          [class.text-emerald-600]="i <= currentStepIndex()"
+                          [class.dark:text-emerald-400]="i <= currentStepIndex()"
+                          [class.text-slate-400]="i > currentStepIndex()"
+                        >
+                          {{ step.label }}
+                        </p>
+                        <p class="text-[11px] text-slate-400 sm:text-xs">
+                          {{ i <= currentStepIndex() ? "Done" : "Upcoming" }}
+                        </p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </ui-card>
+            </div>
+          </div>
+        }
+      } } @else {
+        <ui-card padding="lg" class="block py-10 text-center">
+          <p class="text-base text-slate-600 dark:text-slate-300">
             No active order. Start from the menu.
-            <a
-              routerLink="/customer/menu"
-              class="focus-ring mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-transparent px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 ease-out hover:bg-slate-100 active:scale-[0.98] min-h-[2.75rem] dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 no-underline"
+          </p>
+          <a
+            routerLink="/customer/menu"
+            class="focus-ring mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] no-underline"
+          >
+            Browse food
+          </a>
+        </ui-card>
+      }
+    </div>
+  </main>
+
+  <!-- Sticky footer: delivery partner -->
+  @if (hasFooter()) {
+    <footer
+      class="sticky bottom-0 z-40 shrink-0 border-t border-slate-200/80 bg-white/95 shadow-[0_-12px_32px_-12px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95"
+      style="padding-bottom: env(safe-area-inset-bottom, 0px)"
+    >
+      <div
+        class="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6"
+      >
+        <div class="flex min-w-0 items-center gap-3">
+          <div
+            class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-xl text-emerald-700 dark:from-emerald-900/60 dark:to-emerald-950/60 dark:text-emerald-200"
+            aria-hidden="true"
+          >
+            🛵
+            <span
+              class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-950"
+            ></span>
+          </div>
+          <div class="min-w-0">
+            <p
+              class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
             >
-              Browse food
-            </a>
-          </ui-card>
+              Delivery partner
+            </p>
+            <p class="truncate text-sm font-bold text-slate-900 dark:text-white sm:text-base">
+              {{ riderName() }}
+            </p>
+          </div>
+        </div>
+
+        @if (riderPhone()) {
+          <a
+            [href]="'tel:' + riderPhone()"
+            class="focus-ring inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] no-underline"
+            aria-label="Call delivery partner"
+          >
+            <span aria-hidden="true">📞</span>
+            <span>Call rider</span>
+          </a>
+        } @else {
+          <span
+            class="inline-flex h-11 shrink-0 items-center rounded-xl border border-dashed border-slate-300 px-3 text-xs font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400"
+          >
+            Awaiting rider
+          </span>
         }
       </div>
-    </div>
-  </div>
+    </footer>
+  }
 </div>

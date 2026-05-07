@@ -14,6 +14,7 @@ import { RouterLink } from "@angular/router";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
 import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-state.component";
+import { LogoutButtonComponent } from "../../shared/ui/logout-button/logout-button.component";
 import { catchError, of } from "rxjs";
 
 @Component({
@@ -25,6 +26,7 @@ import { catchError, of } from "rxjs";
     UiCardComponent,
     UiSkeletonComponent,
     UiEmptyStateComponent,
+    LogoutButtonComponent,
   ],
   templateUrl: "./menu.component.html",
   styleUrl: "./menu.component.scss",

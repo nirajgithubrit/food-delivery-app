@@ -15,24 +15,36 @@ import { ToastService } from "../../services/toast.service";
     >
       @for (t of toast.items(); track t.id) {
         <div
-          class="pointer-events-auto flex items-center gap-3 rounded-2xl border px-3.5 py-3 shadow-lift animate-fade-up backdrop-blur-md"
+          class="pointer-events-auto flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-lift animate-fade-up backdrop-blur-md"
           [ngClass]="panelClass(t.type)"
         >
           <span
-            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold leading-none"
             [ngClass]="iconClass(t.type)"
             aria-hidden="true"
           >
             {{ icon(t.type) }}
           </span>
-          <p class="flex-1 text-sm font-medium leading-snug">{{ t.message }}</p>
+          <span class="min-w-0 flex-1 text-sm font-medium mb-0 leading-snug">{{ t.message }}</span>
           <button
             type="button"
-            class="focus-ring rounded-lg px-1 text-xs font-semibold leading-none opacity-70 transition hover:opacity-100"
+            class="focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm leading-none opacity-60 transition hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
             (click)="toast.dismiss(t.id)"
             aria-label="Dismiss notification"
           >
-            ✕
+            <svg
+              class="h-3.5 w-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
       }

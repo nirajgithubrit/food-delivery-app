@@ -2,6 +2,7 @@ const mongoose = require('../db');
 
 const UserSchema = new mongoose.Schema({
   phone: String,
+  name: { type: String, default: '' },
   role: { type: String, default: 'customer' },
 
   // 🛵 DELIVERY INFO

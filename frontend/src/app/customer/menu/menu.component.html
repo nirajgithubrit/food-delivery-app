@@ -23,6 +23,8 @@
         </div>
       }
     </div>
+
+    <app-logout-button class="mt-1 shrink-0 self-start sm:self-auto sm:mt-0" />
   </div>
 </header>
 
@@ -113,7 +115,7 @@
                 </span>
                 <button
                   type="button"
-                  class="focus-ring flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-orange-500 text-base font-semibold text-white shadow-sm"
+                  class="focus-ring flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 text-base font-semibold text-white shadow-md shadow-emerald-500/30 ring-1 ring-emerald-600/20 transition hover:from-teal-400 hover:to-emerald-500 hover:shadow-lg hover:shadow-emerald-500/40 active:scale-95"
                   (click)="increase(item)"
                   [attr.aria-label]="'Add ' + item.name"
                 >
@@ -130,7 +132,7 @@
 
 <a
   routerLink="/customer/cart"
-  class="focus-ring fixed bottom-3 right-3 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:brightness-105 active:scale-[0.98] sm:bottom-5 sm:right-4"
+  class="focus-ring fixed bottom-3 right-3 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-teal-500 via-emerald-500 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xl shadow-emerald-500/40 ring-2 ring-white/40 transition hover:from-teal-400 hover:to-emerald-500 hover:shadow-2xl hover:shadow-emerald-500/50 active:scale-[0.98] sm:bottom-5 sm:right-4"
   style="margin-bottom: max(0.5rem, env(safe-area-inset-bottom))"
   [attr.aria-label]="'Cart, ' + cartCount() + ' items'"
 >

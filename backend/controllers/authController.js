@@ -62,12 +62,24 @@ exports.adminLogin = async (req, res) => {
 };
 
 exports.deliveryLogin = async (req, res) => {
-  const { phone } = req.body;
+  const phone = String(req.body?.phone || "").trim();
+  const name = String(req.body?.name || "").trim();
+
+  if (!phone) {
+    return ApiResponse.fail(res, "Phone is required", 400);
+  }
+  if (!name) {
+    return ApiResponse.fail(res, "Name is required", 400);
+  }
 
   let user = await User.findOne({ phone, role: "delivery" });
 
   if (!user) {
-    user = await User.create({ phone, role: "delivery" });
+    user = await User.create({ phone, name, role: "delivery" });
+  } else if (user.name !== name) {
+    // Keep rider profile in sync with the latest name they signed in with.
+    user.name = name;
+    await user.save();
   }
 
   const token = generateToken(user);
