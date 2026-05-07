@@ -22,6 +22,9 @@ const authRoutes = require("./routes/authRoutes");
 const app = express();
 const server = http.createServer(app);
 
+// Dynamic API responses (orders/tracking) should never be browser-cached.
+app.set("etag", false);
+
 if (config.nodeEnv === "production") {
   app.set("trust proxy", 1);
 }
@@ -64,6 +67,13 @@ app.use(cookieParser());
 
 app.get("/health", (req, res) => {
   res.status(200).json({ ok: true });
+});
+
+app.use("/api/orders", (req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  next();
 });
 
 app.use("/api/auth", authRoutes);

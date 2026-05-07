@@ -73,7 +73,13 @@
           autocomplete="tel"
           class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
         />
-        <ui-button variant="accent" [block]="true" (click)="sendOTP()">Send OTP</ui-button>
+        <button
+          type="button"
+          class="focus-ring mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:bg-emerald-700 active:scale-[0.98] min-h-[2.75rem]"
+          (click)="sendOTP()"
+        >
+          Send OTP
+        </button>
         <div id="recaptcha" class="min-h-0"></div>
         <label class="sr-only" for="cust-otp">One-time password</label>
         <input
@@ -83,7 +89,13 @@
           autocomplete="one-time-code"
           class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
         />
-        <ui-button variant="primary" [block]="true" (click)="verifyOTP()">Verify & continue</ui-button>
+        <button
+          type="button"
+          class="focus-ring mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.75rem]"
+          (click)="verifyOTP()"
+        >
+          Verify & continue
+        </button>
       </div>
     }
 
@@ -107,9 +119,13 @@
           placeholder="Password"
           class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
         />
-        <ui-button variant="secondary" [block]="true" (click)="adminLogin()">
+        <button
+          type="button"
+          class="focus-ring mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:shadow-md active:scale-[0.98] min-h-[2.75rem] dark:bg-white dark:text-slate-900"
+          (click)="adminLogin()"
+        >
           Continue as admin
-        </ui-button>
+        </button>
       </div>
     }
 
@@ -123,9 +139,13 @@
           autocomplete="tel"
           class="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-slate-600 dark:bg-slate-950/50"
         />
-        <ui-button variant="primary" [block]="true" (click)="deliveryLogin()">
+        <button
+          type="button"
+          class="focus-ring mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.75rem]"
+          (click)="deliveryLogin()"
+        >
           Go online
-        </ui-button>
+        </button>
       </div>
     }
   </div>

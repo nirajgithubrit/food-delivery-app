@@ -11,7 +11,12 @@
         Realtime board — confirm, dispatch, and close tickets.
       </p>
     </div>
-    <ui-button variant="ghost" size="sm" link="/admin/add-item">Menu</ui-button>
+    <a
+      routerLink="/admin/add-item"
+      class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-transparent px-3 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 ease-out hover:bg-slate-100 active:scale-[0.98] min-h-[2.25rem] dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 no-underline"
+    >
+      Add menu item
+    </a>
   </div>
 
   @if (loading()) {
@@ -84,46 +89,46 @@
           </div>
 
           <div class="mt-3 flex flex-wrap gap-1.5">
-            <ui-button
-              size="sm"
-              variant="secondary"
+            <button
+              type="button"
+              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:shadow-md active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50 dark:bg-white dark:text-slate-900"
               [disabled]="isDisabled(o, 'confirm')"
               (click)="update(o, 'confirmed')"
             >
               Confirm
-            </ui-button>
-            <ui-button
-              size="sm"
-              variant="accent"
+            </button>
+            <button
+              type="button"
+              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:bg-emerald-700 active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50"
               [disabled]="isDisabled(o, 'progress')"
               (click)="update(o, 'inprogress')"
             >
               Dispatch
-            </ui-button>
-            <ui-button
-              size="sm"
-              variant="primary"
+            </button>
+            <button
+              type="button"
+              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50"
               [disabled]="isDisabled(o, 'done')"
               (click)="update(o, 'completed')"
             >
               Done
-            </ui-button>
-            <ui-button
-              size="sm"
-              variant="ghost"
+            </button>
+            <button
+              type="button"
+              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-transparent px-3 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 ease-out hover:bg-slate-100 active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               [disabled]="o.status !== 'pending'"
               (click)="assign(o)"
             >
               Assign
-            </ui-button>
-            <ui-button
-              size="sm"
-              variant="danger"
+            </button>
+            <button
+              type="button"
+              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:bg-red-700 active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50"
               [disabled]="isDisabled(o, 'reject')"
               (click)="update(o, 'rejected')"
             >
               Reject
-            </ui-button>
+            </button>
           </div>
         </ui-card>
       }

@@ -11,7 +11,6 @@ import { CartService } from "../../services/cart.service";
 import { ToastService } from "../../shared/services/toast.service";
 import { CommonModule } from "@angular/common";
 import { Router, RouterLink } from "@angular/router";
-import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-state.component";
 
@@ -21,7 +20,6 @@ import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-s
   imports: [
     CommonModule,
     RouterLink,
-    UiButtonComponent,
     UiCardComponent,
     UiEmptyStateComponent,
   ],

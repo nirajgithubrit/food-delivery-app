@@ -6,9 +6,12 @@
       </p>
       <h1 class="font-display text-2xl font-bold sm:text-3xl">Your cart</h1>
     </div>
-    <ui-button variant="ghost" size="sm" link="/customer/menu">
+    <a
+      routerLink="/customer/menu"
+      class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-transparent px-3 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 ease-out hover:bg-slate-100 active:scale-[0.98] min-h-[2.25rem] dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 no-underline"
+    >
       ← Back to menu
-    </ui-button>
+    </a>
   </div>
 
   @if (cartItems().length === 0) {
@@ -17,24 +20,35 @@
       title="Cart is empty"
       description="Browse the menu and add dishes you love — we'll keep them warm for checkout."
     >
-      <ui-button variant="primary" [block]="true" link="/customer/menu">
+      <a
+        routerLink="/customer/menu"
+        class="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.75rem] no-underline"
+      >
         Explore menu
-      </ui-button>
+      </a>
     </ui-empty-state>
   } @else {
     <div class="grid gap-6 lg:grid-cols-3">
       <div class="space-y-4 lg:col-span-2">
         @for (item of cartItems(); track item._id) {
-          <ui-card class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">
-                {{ item.name }}
-              </h2>
-              <p class="text-sm text-slate-500 dark:text-slate-400">
-                ₹{{ item.price }} each
-              </p>
+          <ui-card class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex min-w-0 items-center gap-3">
+              <img
+                [src]="item.image || 'https://placehold.co/120x120/f97316/ffffff?text=Food'"
+                [alt]="item.name"
+                class="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                loading="lazy"
+              />
+              <div class="min-w-0">
+                <h2 class="truncate font-display text-xl font-semibold text-slate-900 dark:text-white sm:text-lg">
+                  {{ item.name }}
+                </h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                  ₹{{ item.price }} each
+                </p>
+              </div>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center justify-between gap-3 sm:justify-end">
               <div
                 class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800"
               >
@@ -120,9 +134,13 @@
           </label>
         </div>
 
-        <ui-button variant="primary" class="mt-6" [block]="true" (click)="placeOrder()">
+        <button
+          type="button"
+          class="focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.75rem]"
+          (click)="placeOrder()"
+        >
           Place order
-        </ui-button>
+        </button>
       </ui-card>
     </div>
   }

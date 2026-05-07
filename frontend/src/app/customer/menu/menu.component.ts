@@ -11,7 +11,6 @@ import { CartService } from "../../services/cart.service";
 import { ToastService } from "../../shared/services/toast.service";
 import { CommonModule } from "@angular/common";
 import { RouterLink } from "@angular/router";
-import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
 import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-state.component";
@@ -23,7 +22,6 @@ import { catchError, of } from "rxjs";
   imports: [
     CommonModule,
     RouterLink,
-    UiButtonComponent,
     UiCardComponent,
     UiSkeletonComponent,
     UiEmptyStateComponent,
@@ -52,6 +50,7 @@ export class MenuComponent {
   readonly cartCount = computed(() =>
     this.cartItems().reduce((sum, i) => sum + (i.qty ?? 0), 0),
   );
+  readonly hasLiveOrder = signal(false);
 
   readonly filteredItems = computed(() => {
     const q = this.searchText().toLowerCase();
@@ -81,6 +80,19 @@ export class MenuComponent {
         });
         this.quantitiesMap.set(map);
         this.loading.set(false);
+      });
+
+    this.api
+      .getCustomerOrders()
+      .pipe(
+        catchError(() => of([] as any[])),
+      )
+      .subscribe((orders: any[]) => {
+        const latest = orders?.[0];
+        const status = String(latest?.status ?? "").trim().toLowerCase();
+        this.hasLiveOrder.set(
+          status === "pending" || status === "confirmed" || status === "inprogress",
+        );
       });
   }
 

@@ -1,10 +1,10 @@
 <div
-  class="flex min-h-dvh flex-col bg-slate-100/90 dark:bg-slate-950"
+  class="flex h-dvh flex-col overflow-hidden bg-slate-100/90 dark:bg-slate-950"
   style="padding-bottom: env(safe-area-inset-bottom, 0px)"
 >
   <!-- Compact sticky header -->
   <header
-    class="sticky top-0 z-50 flex h-12 shrink-0 items-center border-b border-slate-200/90 bg-white/95 px-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95 sm:h-14 sm:px-4"
+    class="sticky top-0 z-50 flex h-14 shrink-0 items-center border-b border-slate-200/90 bg-white/95 px-3 py-1 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95 sm:h-16 sm:px-4"
   >
     <div class="mx-auto flex w-full max-w-md items-center justify-between gap-2 sm:max-w-lg">
       <div class="min-w-0">
@@ -26,7 +26,7 @@
   </header>
 
   <!-- Map card: below header, never underlap -->
-  <div class="shrink-0 px-3 pt-2 sm:px-4 sm:pt-3">
+  <div class="shrink-0 px-3 pt-3 sm:px-4 sm:pt-4">
     <div
       class="track-map-card relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-200 shadow-md dark:border-slate-700 dark:bg-slate-800 sm:max-w-lg"
     >
@@ -75,7 +75,7 @@
   >
     <button
       type="button"
-      class="flex w-full shrink-0 items-center justify-center py-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus-ring"
+      class="focus-ring flex w-full shrink-0 items-center justify-center py-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
       (click)="toggleSheet()"
       [attr.aria-expanded]="sheetOpen()"
       aria-controls="track-sheet-body"
@@ -85,8 +85,9 @@
 
     <div
       id="track-sheet-body"
-      class="track-sheet-body min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0 sm:px-4"
-      [class.hidden]="!sheetOpen()"
+      class="track-sheet-body min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-5 pt-0 sm:px-4"
+      [class.max-h-[7.5rem]]="!sheetOpen()"
+      [class.overflow-hidden]="!sheetOpen()"
     >
       <div class="mx-auto flex max-w-md flex-col gap-3 sm:max-w-lg">
         @if (order(); as o) {
@@ -99,9 +100,12 @@
               <p class="mt-1 text-rose-800/90 dark:text-rose-200/90">
                 The restaurant could not accept this order. Try again or choose another time.
               </p>
-              <ui-button variant="primary" class="mt-3" [block]="true" link="/customer/menu">
+              <a
+                routerLink="/customer/menu"
+                class="focus-ring mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.75rem] no-underline"
+              >
                 Back to menu
-              </ui-button>
+              </a>
             </div>
           } @else {
             @if (eta()) {
@@ -118,7 +122,7 @@
                     {{ eta() }}
                   </p>
                 </div>
-                <div class="relative flex h-12 w-12 shrink-0 items-center justify-center">
+                <div class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/50">
                   @if (isNear()) {
                     <span
                       class="absolute inline-flex h-10 w-10 rounded-full bg-emerald-400/60 animate-ping"
@@ -202,9 +206,12 @@
         } @else if (!loading()) {
           <ui-card padding="sm" class="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
             No active order. Start from the menu.
-            <ui-button variant="ghost" class="mt-4" [block]="true" link="/customer/menu">
+            <a
+              routerLink="/customer/menu"
+              class="focus-ring mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-transparent px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 ease-out hover:bg-slate-100 active:scale-[0.98] min-h-[2.75rem] dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 no-underline"
+            >
               Browse food
-            </ui-button>
+            </a>
           </ui-card>
         }
       </div>

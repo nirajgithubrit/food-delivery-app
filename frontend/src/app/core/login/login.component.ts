@@ -6,12 +6,11 @@ import { Router } from "@angular/router";
 import { ApiService } from "../../services/api.service";
 import { SocketService } from "../../services/socket.service";
 import { ToastService } from "../../shared/services/toast.service";
-import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
 
 @Component({
   selector: "app-login",
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: "./login.component.html",
   styleUrl: "./login.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,

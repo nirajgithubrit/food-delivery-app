@@ -1,10 +1,12 @@
 :host.order-track-root {
   display: block;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .track-sheet-body {
   -webkit-overflow-scrolling: touch;
+  transition: max-height 220ms ease;
 }
 
 .track-map-card google-map {

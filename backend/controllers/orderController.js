@@ -71,6 +71,13 @@ exports.getDeliveryOrders = asyncHandler(async (req, res) => {
     ],
   }).sort({ createdAt: -1 });
 
+  req.log?.debug?.({
+    msg: "delivery orders fetched",
+    riderId,
+    count: orders.length,
+    orderIds: orders.map((o) => String(o._id)),
+  });
+
   ApiResponse.success(res, orders);
 });
 
@@ -113,6 +120,10 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   const idStr = order._id.toString();
   io.to(idStr).emit("order-updated", order);
   io.emit("order-updated", order);
+  // Re-announce confirmed unassigned orders to rider pools for reliability
+  if (status === "confirmed" && !order.deliveryBoyId) {
+    io.emit("new-order", order);
+  }
   // Keep delivery/customer UIs in sync when pool orders disappear (same as assign flow)
   if (status === "rejected") {
     io.emit("order-removed", idStr);

@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { ToastService } from '../../shared/services/toast.service';
 
 @Component({
   selector: 'app-add-item',
   standalone: true,
-  imports: [FormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './add-item.component.html',
   styleUrl: './add-item.component.scss'
 })
@@ -16,17 +18,26 @@ export class AddItemComponent {
     image: ''
   };
 
-  constructor(private api: ApiService) { }
+  constructor(
+    private api: ApiService,
+    private toast: ToastService
+  ) { }
 
   addItem() {
     if (!this.item.name || !this.item.price) {
-      alert("Enter all fields");
+      this.toast.error("Enter item name and price.");
       return;
     }
 
-    this.api.addItem(this.item).subscribe(() => {
-      alert("✅ Item Added");
-      this.item = { name: '', price: 0, image: '' };
+    this.api.addItem(this.item).subscribe({
+      next: () => {
+        this.toast.success("Item added to menu.");
+        this.item = { name: '', price: 0, image: '' };
+      },
+      error: (err) => {
+        const msg = err.error?.error?.message ?? err.message ?? "Could not add item.";
+        this.toast.error(msg);
+      }
     });
   }
 }

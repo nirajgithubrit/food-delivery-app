@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angular/core';
 import { SocketService } from '../../services/socket.service';
 import { ApiService } from '../../services/api.service';
 import { CommonModule } from '@angular/common';
 import { GoogleMapsModule } from '@angular/google-maps';
+import { ToastService } from '../../shared/services/toast.service';
 
 @Component({
   selector: 'app-delivery',
@@ -34,11 +35,16 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   watchId: any;
   isTracking = false;
   isArrived = false
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly reconnectHandler = () => this.loadAssignedOrders();
 
 
   constructor(
     private socket: SocketService,
-    private api: ApiService
+    private api: ApiService,
+    private toast: ToastService,
+    private zone: NgZone,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
@@ -46,11 +52,12 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     console.log('🚚 Delivery Dashboard Loaded');
     this.startLocationUpdate();
 
-    const myId = localStorage.getItem('deliveryUser');
+    const myId = this.getRiderId();
 
     if (myId) {
       this.socket.emit('join-delivery', myId);
     }
+    this.socket.socket.on('connect', this.reconnectHandler);
 
     // 🧹 CLEAN OLD LISTENERS
     this.socket.off('new-order');
@@ -59,94 +66,109 @@ export class DeliveryComponent implements OnInit, OnDestroy {
 
     // 🔥 NEW ORDER COMING (ASSIGN)
     this.socket.listen('new-order', (order: any) => {
+      this.zone.run(() => {
 
-      // ❌ if already assigned → ignore
-      if (order.deliveryBoyId) return;
+        // ❌ if already assigned → ignore
+        if (this.hasAssignee(order)) return;
 
-      if (!this.newOrders.some(o => o._id === order._id)) {
-        this.newOrders.push(order);
-      }
+        if (!this.newOrders.some(o => o._id === order._id)) {
+          this.newOrders.push(order);
+        }
+        this.cdr.detectChanges();
+      });
     });
 
     // 🔥 ORDER UPDATE
     this.socket.listen('order-updated', (order: any) => {
+      this.zone.run(() => {
 
-      const myId = localStorage.getItem('deliveryUser');
-      if (!myId) return;
+        const myId = this.getRiderId();
 
       // ===============================
       // 🔥 CASE 1: NOT ASSIGNED (POOL ORDERS)
       // ===============================
-      if (!order.deliveryBoyId) {
-        const id = String(order._id);
-        if (order.status === "pending" || order.status === "confirmed") {
-          const ix = this.newOrders.findIndex((o) => String(o._id) === id);
-          const next = [...this.newOrders];
-          if (ix > -1) {
-            next[ix] = order;
+        const status = this.normalizeStatus(order?.status);
+        const assigned = this.hasAssignee(order);
+
+        if (!assigned) {
+          const id = String(order._id);
+          if (status === "completed" || status === "rejected") {
+            this.newOrders = this.newOrders.filter((o) => String(o._id) !== id);
           } else {
-            next.push(order);
+            const ix = this.newOrders.findIndex((o) => String(o._id) === id);
+            const next = [...this.newOrders];
+            if (ix > -1) {
+              next[ix] = order;
+            } else {
+              next.push(order);
+            }
+            this.newOrders = next;
           }
-          this.newOrders = next;
-        } else {
-          // rejected / terminal — remove from rider offer pool
-          this.newOrders = this.newOrders.filter((o) => String(o._id) !== id);
+          this.cdr.detectChanges();
+          return;
         }
-        return;
-      }
 
       // ===============================
       // ❌ CASE 2: ASSIGNED TO OTHER RIDER
       // ===============================
-      if (order.deliveryBoyId.toString() !== myId.toString()) {
-        return;
-      }
+        if (!myId || String(order.deliveryBoyId).toString() !== myId.toString()) {
+          return;
+        }
 
       // Assigned to me but cancelled/rejected by restaurant
-      if (order.status === "rejected") {
-        this.newOrders = this.newOrders.filter((o) => String(o._id) !== String(order._id));
-        this.ordersQueue = this.ordersQueue.filter((o) => String(o._id) !== String(order._id));
-        if (String(this.orderId) === String(order._id)) {
-          this.finishOrder(String(order._id));
+        if (status === "rejected") {
+          this.newOrders = this.newOrders.filter((o) => String(o._id) !== String(order._id));
+          this.ordersQueue = this.ordersQueue.filter((o) => String(o._id) !== String(order._id));
+          if (String(this.orderId) === String(order._id)) {
+            this.finishOrder(String(order._id));
+          }
+          this.cdr.detectChanges();
+          return;
         }
-        return;
-      }
 
       // remove from new orders
-      this.newOrders = this.newOrders.filter(o => o._id !== order._id);
+        this.newOrders = this.newOrders.filter(o => o._id !== order._id);
 
       // remove completed
-      if (order.status === 'completed') {
-        this.finishOrder(order._id);
-        return;
-      }
+        if (status === 'completed') {
+          this.finishOrder(order._id);
+          this.cdr.detectChanges();
+          return;
+        }
 
       // update queue
-      const index = this.ordersQueue.findIndex(o => o._id === order._id);
+        const index = this.ordersQueue.findIndex(o => o._id === order._id);
 
-      if (index > -1) {
-        this.ordersQueue[index] = order;
-      } else {
-        this.ordersQueue.push(order);
-      }
+        if (index > -1) {
+          this.ordersQueue[index] = order;
+        } else {
+          this.ordersQueue.push(order);
+        }
 
       // start tracking only for MY order
-      if (order.status === 'inprogress') {
-        this.startOrder(order);
-      }
+        if (status === 'inprogress') {
+          this.startOrder(order);
+        }
+        this.cdr.detectChanges();
+      });
     });
 
     // ORDER REMOVED
     this.socket.listen('order-removed', (orderId: unknown) => {
-      const id = String(orderId);
-      this.newOrders = this.newOrders.filter((o) => String(o._id) !== id);
-      this.ordersQueue = this.ordersQueue.filter((o) => String(o._id) !== id);
-      if (this.orderId != null && String(this.orderId) === id) {
-        this.finishOrder(id);
-      }
+      this.zone.run(() => {
+        const id = String(orderId);
+        // Keep pool stable: only remove from "new orders" if not present in latest API load.
+        // Avoid flicker where transient remove events hide valid unassigned offers.
+        this.ordersQueue = this.ordersQueue.filter((o) => String(o._id) !== id);
+        if (this.orderId != null && String(this.orderId) === id) {
+          this.finishOrder(id);
+        }
+        this.cdr.detectChanges();
+      });
     });
 
     this.loadAssignedOrders();
+    this.refreshTimer = setInterval(() => this.loadAssignedOrders(), 10000);
   }
 
   //Starting Location 
@@ -171,28 +193,53 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   // 📦 INITIAL LOAD
   loadAssignedOrders() {
 
-    this.api.getMyDeliveryOrders().subscribe((orders: any) => {
+    this.api.getMyDeliveryOrders().subscribe({
+      next: (orders: any) => {
+        this.zone.run(() => {
+        const list = this.normalizeOrders(orders);
+        const myId = this.getRiderId();
 
-      const myId = localStorage.getItem('deliveryUser');
-      if (!myId) return;
+        // ✅ 1. LOAD NEW ORDERS (UNASSIGNED)
+        this.newOrders = list.filter((o: any) => !this.hasAssignee(o));
 
-      // ✅ 1. LOAD NEW ORDERS (UNASSIGNED)
-      this.newOrders = orders.filter((o: any) =>
-        !o.deliveryBoyId && (o.status === 'pending' || o.status === 'confirmed')
-      );
+        // ✅ 2. LOAD MY ASSIGNED ORDERS
+        this.ordersQueue = list.filter((o: any) => {
+          const status = this.normalizeStatus(o?.status);
+          const active = status !== 'completed' && status !== 'rejected';
+          if (!active || !this.hasAssignee(o)) return false;
+          if (!myId) return true;
+          return String(o.deliveryBoyId) === myId;
+        });
 
-      // ✅ 2. LOAD MY ASSIGNED ORDERS
-      this.ordersQueue = orders.filter((o: any) =>
-        o.deliveryBoyId?.toString() === myId &&
-        o.status !== 'completed' &&
-        o.status !== 'rejected'
-      );
+        // ✅ 3. START ACTIVE ORDER
+        const active = this.ordersQueue.find((o: any) => this.normalizeStatus(o?.status) === 'inprogress');
+        if (active) {
+          this.startOrder(active);
+        } else if (this.currentOrder) {
+          const stillActive = this.ordersQueue.some(
+            (o: any) => String(o._id) === String(this.currentOrder?._id)
+          );
+          if (!stillActive) {
+            this.finishOrder(String(this.currentOrder._id));
+          }
+        }
 
-      // ✅ 3. START ACTIVE ORDER
-      const active = this.ordersQueue.find(o => o.status === 'inprogress');
-
-      if (active) {
-        this.startOrder(active);
+        console.log(
+          '[delivery] api list',
+          list.length,
+          list.map((o: any) => ({
+            id: o?._id,
+            status: o?.status,
+            deliveryBoyId: o?.deliveryBoyId
+          }))
+        );
+        console.log('[delivery] newOrders', this.newOrders.length);
+        this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        const msg = err.error?.error?.message ?? err.message ?? 'Could not refresh delivery orders';
+        this.toast.error(msg);
       }
     });
   }
@@ -200,9 +247,9 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   // ✅ ACCEPT ORDER
   acceptOrder(order: any) {
 
-    const deliveryBoyId = localStorage.getItem('deliveryUser');
+    const deliveryBoyId = this.getRiderId();
     if (!deliveryBoyId) {
-      console.warn('[acceptOrder] missing deliveryUser in localStorage');
+      this.toast.error('Rider session is missing. Please sign in again.');
       return;
     }
 
@@ -218,7 +265,7 @@ export class DeliveryComponent implements OnInit, OnDestroy {
       error: (err) => {
         const msg = err.error?.error?.message ?? err.message ?? 'Accept failed';
         console.error('[acceptOrder] API error', err);
-        alert(msg);
+        this.toast.error(msg);
       },
     });
   }
@@ -357,7 +404,7 @@ export class DeliveryComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         const msg = err.error?.error?.message ?? err.message ?? 'Verification failed';
-        alert(msg);
+        this.toast.error(msg);
       },
     });
   }
@@ -371,7 +418,7 @@ export class DeliveryComponent implements OnInit, OnDestroy {
       this.currentOrder.paymentMethod === 'upi' &&
       this.currentOrder.paymentStatus !== 'verified'
     ) {
-      alert('Confirm UPI payment before completing the order.');
+      this.toast.info('Confirm UPI payment before completing the order.');
       return;
     }
 
@@ -379,7 +426,7 @@ export class DeliveryComponent implements OnInit, OnDestroy {
       next: () => this.finishOrder(this.orderId!),
       error: (err) => {
         const msg = err.error?.error?.message ?? err.message ?? 'Could not complete order';
-        alert(msg);
+        this.toast.error(msg);
       },
     });
   }
@@ -412,10 +459,50 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
+  private normalizeOrders(payload: any): any[] {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.data)) return payload.data;
+    return [];
+  }
+
+  private normalizeStatus(status: unknown): string {
+    return String(status ?? '').trim().toLowerCase();
+  }
+
+  private hasAssignee(order: any): boolean {
+    const raw = order?.deliveryBoyId;
+    if (raw == null) return false;
+    const val = String(raw).trim().toLowerCase();
+    return val !== '' && val !== 'null' && val !== 'undefined';
+  }
+
+  private getRiderId(): string | null {
+    const fromLocal = localStorage.getItem('deliveryUser');
+    if (fromLocal) return fromLocal;
+
+    const token = sessionStorage.getItem('authToken');
+    if (!token) return null;
+
+    try {
+      const base64 = token.split('.')[1];
+      if (!base64) return null;
+      const json = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
+      const payload = JSON.parse(json);
+      return payload?.id ? String(payload.id) : null;
+    } catch {
+      return null;
+    }
+  }
+
   ngOnDestroy() {
     this.stopTracking();
+    this.socket.socket.off('connect', this.reconnectHandler);
     this.socket.off('order-updated');
     this.socket.off('new-order');
     this.socket.off('order-removed');
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
   }
 }

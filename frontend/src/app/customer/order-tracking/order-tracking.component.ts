@@ -15,7 +15,6 @@ import { RouterLink } from "@angular/router";
 import { GoogleMapsModule } from "@angular/google-maps";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
-import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
 
 @Component({
   selector: "app-order-tracking",
@@ -26,7 +25,6 @@ import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component
     GoogleMapsModule,
     UiCardComponent,
     UiSkeletonComponent,
-    UiButtonComponent,
   ],
   templateUrl: "./order-tracking.component.html",
   styleUrl: "./order-tracking.component.scss",

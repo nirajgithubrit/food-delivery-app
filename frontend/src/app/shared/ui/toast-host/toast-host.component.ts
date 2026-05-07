@@ -15,15 +15,22 @@ import { ToastService } from "../../services/toast.service";
     >
       @for (t of toast.items(); track t.id) {
         <div
-          class="pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-lift animate-fade-up backdrop-blur-md"
+          class="pointer-events-auto flex items-center gap-3 rounded-2xl border px-3.5 py-3 shadow-lift animate-fade-up backdrop-blur-md"
           [ngClass]="panelClass(t.type)"
         >
-          <span class="mt-0.5 text-lg" aria-hidden="true">{{ icon(t.type) }}</span>
+          <span
+            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+            [ngClass]="iconClass(t.type)"
+            aria-hidden="true"
+          >
+            {{ icon(t.type) }}
+          </span>
           <p class="flex-1 text-sm font-medium leading-snug">{{ t.message }}</p>
           <button
             type="button"
-            class="text-xs font-semibold opacity-70 hover:opacity-100 focus-ring rounded-lg px-1"
+            class="focus-ring rounded-lg px-1 text-xs font-semibold leading-none opacity-70 transition hover:opacity-100"
             (click)="toast.dismiss(t.id)"
+            aria-label="Dismiss notification"
           >
             ✕
           </button>
@@ -43,6 +50,16 @@ export class ToastHostComponent {
       return "border-red-200/80 bg-red-50/95 text-red-900 dark:border-red-900 dark:bg-red-950/90 dark:text-red-100";
     }
     return "border-slate-200/80 bg-white/95 text-slate-900 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-100";
+  }
+
+  iconClass(type: string): string {
+    if (type === "success") {
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/70 dark:text-emerald-200";
+    }
+    if (type === "error") {
+      return "bg-red-100 text-red-700 dark:bg-red-900/70 dark:text-red-200";
+    }
+    return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
   }
 
   icon(type: string): string {

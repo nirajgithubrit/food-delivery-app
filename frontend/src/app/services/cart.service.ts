@@ -7,29 +7,36 @@ export class CartService {
     private items$ = new BehaviorSubject<any[]>([]);
 
     add(item: any) {
-        const exist = this.items.find(i => i._id === item._id);
+        const ix = this.items.findIndex(i => i._id === item._id);
 
-        if (exist) {
-            exist.qty++;
+        if (ix > -1) {
+            const next = [...this.items];
+            const current = next[ix];
+            next[ix] = { ...current, qty: (current.qty ?? 0) + 1 };
+            this.items = next;
         } else {
-            this.items.push({ ...item, qty: 1 });
+            this.items = [...this.items, { ...item, qty: 1 }];
         }
 
-        this.items$.next(this.items);
+        this.items$.next([...this.items]);
     }
 
     remove(item: any) {
-        const exist = this.items.find(i => i._id === item._id);
+        const ix = this.items.findIndex(i => i._id === item._id);
+        if (ix === -1) return;
 
-        if (!exist) return;
+        const next = [...this.items];
+        const current = next[ix];
+        const updated = { ...current, qty: (current.qty ?? 0) - 1 };
 
-        exist.qty--;
-
-        if (exist.qty <= 0) {
-            this.items = this.items.filter(i => i._id !== item._id);
+        if (updated.qty <= 0) {
+            next.splice(ix, 1);
+        } else {
+            next[ix] = updated;
         }
 
-        this.items$.next(this.items);
+        this.items = next;
+        this.items$.next([...this.items]);
     }
 
     getItems() {
@@ -38,6 +45,6 @@ export class CartService {
 
     clear() {
         this.items = [];
-        this.items$.next(this.items);
+        this.items$.next([]);
     }
 }

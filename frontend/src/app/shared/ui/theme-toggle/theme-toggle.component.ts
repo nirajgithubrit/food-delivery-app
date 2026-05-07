@@ -9,14 +9,15 @@ import { ThemeService } from "../../services/theme.service";
   template: `
     <button
       type="button"
-      class="glass-panel focus-ring flex h-10 w-10 items-center justify-center rounded-xl text-slate-800 shadow-sm transition hover:scale-105 dark:text-amber-200"
+      class="glass-panel focus-ring flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/70 text-slate-800 shadow-sm transition hover:scale-[1.02] dark:border-slate-700 dark:text-amber-200"
       (click)="theme.toggle()"
       [attr.aria-label]="theme.dark() ? 'Switch to light mode' : 'Switch to dark mode'"
       [attr.aria-pressed]="theme.dark()"
+      [attr.title]="theme.dark() ? 'Light mode' : 'Dark mode'"
     >
       @if (theme.dark()) {
         <svg
-          class="h-5 w-5"
+          class="h-4 w-4"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -27,7 +28,7 @@ import { ThemeService } from "../../services/theme.service";
         </svg>
       } @else {
         <svg
-          class="h-5 w-5"
+          class="h-4 w-4"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

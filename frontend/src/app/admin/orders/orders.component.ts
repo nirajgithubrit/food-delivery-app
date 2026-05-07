@@ -10,14 +10,14 @@ import { ApiService } from "../../services/api.service";
 import { SocketService } from "../../services/socket.service";
 import { ToastService } from "../../shared/services/toast.service";
 import { CommonModule } from "@angular/common";
-import { UiButtonComponent } from "../../shared/ui/ui-button/ui-button.component";
+import { RouterLink } from "@angular/router";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
 
 @Component({
   selector: "app-orders",
   standalone: true,
-  imports: [CommonModule, UiButtonComponent, UiCardComponent, UiSkeletonComponent],
+  imports: [CommonModule, RouterLink, UiCardComponent, UiSkeletonComponent],
   templateUrl: "./orders.component.html",
   styleUrl: "./orders.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
