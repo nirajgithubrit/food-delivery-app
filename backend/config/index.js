@@ -27,6 +27,7 @@ module.exports = {
     lat: Number(process.env.RESTAURANT_LAT) || 22.721585,
     lng: Number(process.env.RESTAURANT_LNG) || 71.647064,
     name: process.env.RESTAURANT_NAME || "Gir Gamathi",
-    phone: process.env.RESTAURANT_PHONE || "",
+    /** Demo line for tracking “Call restaurant”; override with RESTAURANT_PHONE in .env */
+    phone: process.env.RESTAURANT_PHONE || "+918155012096",
   },
 };

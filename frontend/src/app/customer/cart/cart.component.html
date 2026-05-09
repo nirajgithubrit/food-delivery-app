@@ -136,10 +136,19 @@
 
         <button
           type="button"
-          class="focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.75rem]"
+          class="focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.75rem] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100"
+          [disabled]="placingOrder()"
           (click)="placeOrder()"
         >
-          Place order
+          @if (placingOrder()) {
+            <span
+              class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+              aria-hidden="true"
+            ></span>
+            <span>Placing order…</span>
+          } @else {
+            <span>Place order</span>
+          }
         </button>
       </ui-card>
     </div>

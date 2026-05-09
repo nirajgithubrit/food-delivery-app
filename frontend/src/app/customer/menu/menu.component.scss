@@ -1,0 +1,22 @@
+/* Menu: headings + search focus — aligned with login / brand */
+
+.menu-page-title {
+  font-family: Outfit, DM Sans, system-ui, sans-serif;
+}
+
+.menu-item-name {
+  font-family: Outfit, DM Sans, system-ui, sans-serif;
+}
+
+.menu-search-input:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgb(249 115 22 / 0.25),
+    0 1px 2px rgb(15 23 42 / 0.06);
+}
+
+:host-context(.dark) .menu-search-input:focus {
+  box-shadow:
+    0 0 0 2px rgb(249 115 22 / 0.35),
+    0 1px 2px rgb(0 0 0 / 0.2);
+}

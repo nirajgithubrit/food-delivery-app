@@ -18,6 +18,31 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /*
+   * iOS Safari zooms the viewport when focused inputs use font-size < 16px.
+   * Enforce 16px on small screens project-wide; exclude non-text controls below.
+   */
+  @media screen and (max-width: 767px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"],
+    input[type="range"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    input[type="image"],
+    input[type="file"],
+    input[type="color"],
+    input[type="hidden"] {
+      font-size: inherit !important;
+    }
+  }
+
   app-root {
     display: block;
     min-height: 100dvh;

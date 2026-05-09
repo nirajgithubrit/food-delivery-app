@@ -3,7 +3,7 @@
     class="login-premium-root relative flex min-h-dvh flex-col bg-[#f6f4f1] pb-[max(4.5rem,env(safe-area-inset-bottom))] dark:bg-slate-950 max-md:pb-24"
   >
     <header
-      class="login-premium-hero relative z-[1] flex h-[min(26dvh,11rem)] shrink-0 flex-col items-center justify-end overflow-hidden px-4 pb-8 pt-7 text-center sm:h-[min(28dvh,12rem)] sm:px-6 sm:pb-9 sm:pt-8 md:h-[min(30dvh,13.5rem)] md:px-8 md:pb-10 md:pt-10 lg:h-[min(32dvh,14.5rem)]"
+      class="login-premium-hero relative z-[1] flex h-[min(26dvh,11rem)] shrink-0 flex-col items-center justify-end overflow-hidden px-4 pb-8 text-center pt-[max(1rem,env(safe-area-inset-top,0px))] sm:h-[min(28dvh,12rem)] sm:px-6 sm:pb-9 sm:pt-[max(1.25rem,env(safe-area-inset-top,0px))] md:h-[min(30dvh,13.5rem)] md:px-8 md:pb-10 md:pt-[max(1.5rem,env(safe-area-inset-top,0px))] lg:h-[min(32dvh,14.5rem)]"
       aria-label="Gir Gamathi"
     >
       <div class="login-premium-hero-bg" aria-hidden="true"></div>
@@ -183,7 +183,7 @@
     class="login-staff-root relative flex min-h-dvh flex-col bg-[#f6f4f1] pb-[max(4.5rem,env(safe-area-inset-bottom))] dark:bg-slate-950 max-md:pb-24"
   >
     <header
-      class="login-staff-hero relative z-[1] flex h-[min(22dvh,9.5rem)] shrink-0 flex-col items-center justify-end overflow-hidden px-4 pb-7 pt-7 text-center sm:h-[min(24dvh,10.5rem)] sm:px-6 sm:pb-8 sm:pt-8 md:h-[min(26dvh,11.5rem)] md:px-8 md:pb-9"
+      class="login-staff-hero relative z-[1] flex min-h-[11.5rem] shrink-0 flex-col items-center justify-center overflow-hidden px-4 pb-8 text-center pt-[max(1.25rem,env(safe-area-inset-top,0px))] h-[min(30dvh,13.5rem)] sm:min-h-[12rem] sm:px-6 sm:pb-9 sm:pt-[max(1.35rem,env(safe-area-inset-top,0px))] sm:h-[min(32dvh,14.5rem)] md:min-h-[13rem] md:px-8 md:pb-10 md:pt-[max(1.5rem,env(safe-area-inset-top,0px))] md:h-[min(34dvh,15rem)]"
       [attr.aria-label]="loginMode() === 'admin' ? 'Admin' : 'Rider'"
     >
       <div class="login-staff-hero-bg" aria-hidden="true"></div>
@@ -191,7 +191,7 @@
 
       <div class="relative z-10 max-w-md px-1">
         <p class="font-hero text-lg font-semibold text-white/90 sm:text-xl">Gir Gamathi</p>
-        <h1
+        <h2
           class="mt-0.5 font-display text-[clamp(1.25rem,5vw,1.75rem)] font-bold text-white drop-shadow-sm sm:text-2xl"
         >
           @if (loginMode() === "admin") {
@@ -199,7 +199,7 @@
           } @else {
             Rider sign in
           }
-        </h1>
+        </h2>
       </div>
     </header>
 
