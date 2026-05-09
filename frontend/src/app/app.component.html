@@ -1,7 +1,10 @@
 <div
-  class="min-h-dvh bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900 transition-colors duration-300 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-100"
+  class="min-h-dvh bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900 transition-[background] duration-300 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-100"
 >
   <router-outlet />
-  <app-theme-toggle class="fixed right-3 top-3 z-[90] sm:right-4 sm:top-4" />
+  <app-theme-toggle
+    class="fixed right-3 top-3 z-[9999] sm:right-4 sm:top-4"
+    [class.login-theme-bottom-mobile]="isLoginRoute()"
+  />
   <app-toast-host />
 </div>

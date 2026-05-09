@@ -1,11 +1,21 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from "@angular/core";
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  OnInit,
+  signal,
+} from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { AuthService } from "../../services/auth.service";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
-import { Router } from "@angular/router";
+import { ActivatedRoute, Router } from "@angular/router";
 import { ApiService } from "../../services/api.service";
 import { SocketService } from "../../services/socket.service";
 import { ToastService } from "../../shared/services/toast.service";
+
+export type LoginMode = "customer" | "admin" | "rider";
 
 @Component({
   selector: "app-login",
@@ -15,14 +25,16 @@ import { ToastService } from "../../shared/services/toast.service";
   styleUrl: "./login.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly api = inject(ApiService);
   private readonly socket = inject(SocketService);
   private readonly toast = inject(ToastService);
 
-  readonly role = signal<"customer" | "admin" | "delivery">("customer");
+  readonly loginMode = signal<LoginMode>("customer");
 
   /** Customer OTP step state. */
   readonly otpSent = signal(false);
@@ -35,12 +47,34 @@ export class LoginComponent {
   email = "";
   password = "";
 
-  private confirmationResult: { confirm: (c: string) => Promise<unknown> } | null = null;
+  private confirmationResult: { confirm: (c: string) => Promise<unknown> } | null =
+    null;
   private recaptchaVerifier: { clear: () => void } | null = null;
 
-  setRole(r: "customer" | "admin" | "delivery"): void {
-    this.role.set(r);
-    this.resetOtpFlow();
+  /** Show reCAPTCHA block only after a valid 10-digit number (compact mobile flow). */
+  phoneReadyForCaptcha(): boolean {
+    return /^\d{10}$/.test(this.phone.trim());
+  }
+
+  /** Clear widget if user edits number away from 10 digits. */
+  onCustomerPhoneChange(): void {
+    if (!this.phoneReadyForCaptcha()) {
+      this.clearRecaptcha();
+    }
+  }
+
+  ngOnInit(): void {
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => {
+        const mode = data["loginMode"] as LoginMode | undefined;
+        this.loginMode.set(mode ?? "customer");
+        this.resetOtpFlow();
+        this.phone = "";
+        this.name = "";
+        this.email = "";
+        this.password = "";
+      });
   }
 
   // ---------- Customer OTP flow ----------
@@ -53,7 +87,6 @@ export class LoginComponent {
     }
     if (this.sendingOtp()) return;
 
-    // Reset any previous reCAPTCHA instance so the container is fresh.
     this.clearRecaptcha();
 
     this.sendingOtp.set(true);
@@ -111,7 +144,6 @@ export class LoginComponent {
       });
   }
 
-  /** Reset the OTP step so the user can edit phone or resend. */
   changeNumber(): void {
     this.resetOtpFlow();
   }

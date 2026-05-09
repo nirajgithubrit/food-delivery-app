@@ -14,6 +14,12 @@ module.exports = {
           "sans-serif",
         ],
         display: ["Outfit", "DM Sans", "system-ui", "sans-serif"],
+        hero: [
+          "Fraunces",
+          "Georgia",
+          "Times New Roman",
+          "serif",
+        ],
       },
       colors: {
         brand: {
