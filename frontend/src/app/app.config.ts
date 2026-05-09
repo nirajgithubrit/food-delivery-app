@@ -11,6 +11,7 @@ import { routes } from "./app.routes";
 import { provideAnimationsAsync } from "@angular/platform-browser/animations/async";
 import { GoogleMapsModule } from "@angular/google-maps";
 import { apiResponseInterceptor } from "./interceptors/api-response.interceptor";
+import { authTokenInterceptor } from "./interceptors/auth-token.interceptor";
 import { AppErrorHandler } from "./core/errors/app-error.handler";
 
 export const appConfig: ApplicationConfig = {
@@ -18,7 +19,9 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideAnimationsAsync(),
-    provideHttpClient(withInterceptors([apiResponseInterceptor])),
+    provideHttpClient(
+      withInterceptors([authTokenInterceptor, apiResponseInterceptor]),
+    ),
     importProvidersFrom(GoogleMapsModule),
     { provide: ErrorHandler, useClass: AppErrorHandler },
   ],
