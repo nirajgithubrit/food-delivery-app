@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://your-api.example.com/api',
-  socketUrl: 'https://your-api.example.com',
+  apiUrl: 'https://food-delivery-app-dev.onrender.com/api',
+  socketUrl: 'https://food-delivery-app-dev.onrender.com',
 };
