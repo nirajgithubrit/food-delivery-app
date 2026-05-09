@@ -41,7 +41,7 @@ export class MenuComponent {
   readonly items = signal<any[]>([]);
   readonly searchText = signal("");
   readonly selectedCategory = signal<string>("all");
-  readonly categories = ["all", "dosa", "pizza", "burger"] as const;
+  readonly categories = signal<string[]>(["all"]);
 
   private readonly quantitiesMap = signal<Record<string, number>>({});
 
@@ -60,7 +60,8 @@ export class MenuComponent {
     return this.items().filter((item) => {
       const matchSearch = (item.name ?? "").toLowerCase().includes(q);
       const matchCategory = cat === "all" || item.category === cat;
-      return matchSearch && matchCategory;
+      const available = item.isAvailable !== false;
+      return matchSearch && matchCategory && available;
     });
   });
 
@@ -82,6 +83,15 @@ export class MenuComponent {
         });
         this.quantitiesMap.set(map);
         this.loading.set(false);
+      });
+
+    this.api
+      .getCategories()
+      .pipe(catchError(() => of([] as any[])))
+      .subscribe((res: any) => {
+        const list = Array.isArray(res) ? res : [];
+        const dynamic = list.map((c: any) => String(c.slug || "").trim()).filter(Boolean);
+        this.categories.set(["all", ...dynamic]);
       });
 
     this.api

@@ -16,6 +16,8 @@ const { createSocketAuthMiddleware } = require("./middleware/socketAuth");
 const { registerSocketHandlers } = require("./sockets/handlers");
 
 const itemRoutes = require("./routes/itemRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const authRoutes = require("./routes/authRoutes");
 
@@ -78,6 +80,8 @@ app.use("/api/orders", (req, res, next) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/upload", uploadRoutes);
 app.use("/api/orders", orderRoutes);
 
 app.use(notFound);

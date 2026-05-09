@@ -63,7 +63,8 @@ export class OrdersComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.api.getOrders().subscribe({
       next: (res: any) => {
-        this.orders.set(res ?? []);
+        const list = Array.isArray(res) ? res : [];
+        this.orders.set(list);
         this.loading.set(false);
       },
       error: () => {

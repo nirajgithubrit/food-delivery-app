@@ -17,9 +17,19 @@ exports.placeOrder = asyncHandler(async (req, res) => {
 
   const paymentStatus = paymentMethod === "upi" ? "pending" : "na";
 
+  const safeItems = (Array.isArray(items) ? items : []).map((item) => ({
+    _id: item?._id,
+    name: item?.name,
+    description: String(item?.description || "").trim(),
+    category: String(item?.category || "").trim().toLowerCase(),
+    price: Number(item?.price) || 0,
+    qty: Number(item?.qty) || 0,
+    image: item?.image || "",
+  }));
+
   const order = await Order.create({
     userId: String(req.user.id),
-    items,
+    items: safeItems,
     totalAmount,
     location,
     phone,

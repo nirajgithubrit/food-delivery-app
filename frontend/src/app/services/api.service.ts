@@ -17,6 +17,42 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/items`, data, { withCredentials: true });
   }
 
+  updateItem(id: string, data: unknown) {
+    return this.http.put(`${this.baseUrl}/items/${id}`, data, { withCredentials: true });
+  }
+
+  deleteItem(id: string) {
+    return this.http.delete(`${this.baseUrl}/items/${id}`, { withCredentials: true });
+  }
+
+  getCategories() {
+    return this.http.get(`${this.baseUrl}/categories`, { withCredentials: true });
+  }
+
+  addCategory(name: string) {
+    return this.http.post(
+      `${this.baseUrl}/categories`,
+      { name },
+      { withCredentials: true },
+    );
+  }
+
+  updateCategory(id: string, name: string) {
+    return this.http.put(
+      `${this.baseUrl}/categories/${id}`,
+      { name },
+      { withCredentials: true },
+    );
+  }
+
+  uploadItemImage(file: File) {
+    const form = new FormData();
+    form.append("image", file);
+    return this.http.post(`${this.baseUrl}/upload/image`, form, {
+      withCredentials: true,
+    });
+  }
+
   placeOrder(data: unknown) {
     return this.http.post(`${this.baseUrl}/orders`, data, { withCredentials: true });
   }
