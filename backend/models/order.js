@@ -23,6 +23,9 @@ const OrderSchema = new mongoose.Schema({
     lat: Number,
     lng: Number,
   },
+  /** Snapshot at order time (tracking + sockets); falls back to config in API if missing */
+  restaurantName: { type: String, default: "" },
+  restaurantPhone: { type: String, default: "" },
   pickupStatus: {
     type: String,
     enum: ["pending", "picked"],

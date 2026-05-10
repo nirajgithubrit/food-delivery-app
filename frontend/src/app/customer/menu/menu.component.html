@@ -1,150 +1,168 @@
-<header
-  class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90"
+<div
+  class="menu-page-root min-h-dvh bg-[#f6f4f1] pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] dark:bg-slate-950 sm:pb-10"
 >
-  <div class="mx-auto flex max-w-6xl items-start justify-between gap-3 px-3 py-2.5 pr-12 sm:items-center sm:px-5 sm:pr-16">
-    <div class="min-w-0 flex-1">
-      <p class="text-[10px] font-semibold uppercase tracking-wider text-brand-600">
-        LocalBite
-      </p>
-      <p class="font-display text-2xl font-bold leading-tight text-slate-900 dark:text-white sm:text-3xl">
-        Order fresh food
-      </p>
-      <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-        Freshly prepared and delivered fast.
-      </p>
-      @if (hasLiveOrder()) {
-        <div class="mt-2">
-          <a
-            routerLink="/customer/track"
-            class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-transparent px-3 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 ease-out hover:bg-slate-100 active:scale-[0.98] min-h-[2.25rem] dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 no-underline"
-          >
-            🟢 Live order tracking
-          </a>
-        </div>
-      }
-    </div>
-
-    <app-logout-button class="mt-1 shrink-0 self-start sm:self-auto sm:mt-0" />
-  </div>
-</header>
-
-<section class="mx-auto max-w-6xl px-3 py-4 pb-24 sm:px-5 sm:py-6 sm:pb-6">
-  <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
-    <label class="sr-only" for="menu-search">Search menu</label>
-    <input
-      id="menu-search"
-      type="search"
-      [value]="searchText()"
-      (input)="onSearch($any($event.target).value); applyFilters()"
-      placeholder="Search dishes…"
-      class="focus-ring h-11 w-full rounded-xl border border-slate-200/90 bg-white px-3.5 text-sm shadow-sm placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900/80 dark:placeholder:text-slate-500 sm:flex-1"
-    />
-
-    <label class="sr-only" for="menu-category">Category</label>
-    <select
-      id="menu-category"
-      [value]="selectedCategory()"
-      (change)="onCategory($any($event.target).value); applyFilters()"
-      class="focus-ring h-11 w-full rounded-xl border border-slate-200/90 bg-white px-3.5 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900/80 sm:w-44 md:w-52"
-    >
-      @for (c of categories(); track c) {
-        <option [value]="c">{{ c | titlecase }}</option>
-      }
-    </select>
-  </div>
-
-  @if (loading()) {
-    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      @for (_ of [1, 2, 3, 4, 5, 6, 7, 8]; track _) {
-        <ui-card>
-          <ui-skeleton class="mb-3 block" height="10rem" rounded="lg" />
-          <ui-skeleton class="mb-2 block" height="0.875rem" width="70%" />
-          <ui-skeleton class="mb-3 block" height="0.75rem" width="40%" />
-          <ui-skeleton class="block" height="2.5rem" rounded="lg" />
-        </ui-card>
-      }
-    </div>
-  } @else if (filteredItems().length === 0) {
-    <div class="mt-8">
-      <ui-empty-state
-        icon="🥗"
-        title="No dishes match"
-        description="Try another search or pick a different category."
-      />
-    </div>
-  } @else {
+  <header
+    class="menu-page-header sticky top-0 z-30 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/90"
+  >
     <div
-      class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      class="mx-auto flex max-w-6xl items-start justify-between gap-3 px-3 py-2.5 pr-12 sm:items-center sm:px-5 sm:py-3 sm:pr-16"
     >
-      @for (item of filteredItems(); track item._id) {
-        <ui-card
-          class="group flex flex-col overflow-hidden transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lift"
+      <div class="min-w-0 flex-1">
+        <p
+          class="font-hero text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400 sm:text-xs sm:tracking-[0.22em]"
         >
-          <div class="-mx-3 -mt-3 mb-3 overflow-hidden sm:-mx-4 sm:-mt-4">
-            <img
-              [src]="item.image || 'https://placehold.co/600x400/f97316/ffffff?text=Food'"
-              [alt]="item.name"
-              class="h-40 w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-              loading="lazy"
-            />
+          Gir Gamathi
+        </p>
+        <h4
+          class="menu-page-title mt-0.5 text-xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-2xl md:text-3xl"
+        >
+          Order fresh food
+      </h4>
+        <p class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 sm:text-xs">
+          Freshly prepared and delivered fast.
+        </p>
+        @if (hasLiveOrder()) {
+          <div class="mt-2">
+            <a
+              routerLink="/customer/track"
+              class="focus-ring inline-flex min-h-[2.25rem] items-center justify-center gap-2 rounded-xl border border-brand-200/80 bg-brand-50/80 px-3 py-2 text-xs font-semibold text-brand-800 no-underline transition-all duration-200 ease-out hover:bg-brand-100/90 active:scale-[0.98] dark:border-brand-900/50 dark:bg-brand-950/40 dark:text-brand-200 dark:hover:bg-brand-900/50 sm:text-sm"
+            >
+              <span class="text-emerald-500" aria-hidden="true">●</span>
+              Live order tracking
+            </a>
           </div>
-          <div class="flex flex-1 flex-col">
-            <h3 class="font-display text-lg font-semibold leading-snug text-slate-900 dark:text-white sm:text-base">
-              {{ item.name }}
-            </h3>
-            <div class="mt-1 flex items-center gap-1.5">
-              <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {{ item.category | titlecase }}
-              </span>
+        }
+      </div>
+
+      <app-logout-button class="mt-1 shrink-0 self-start sm:mt-0 sm:self-auto" />
+    </div>
+  </header>
+
+  <section class="mx-auto max-w-6xl px-3 py-3 sm:px-5 sm:py-5">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+      <label class="sr-only" for="menu-search">Search menu</label>
+      <input
+        id="menu-search"
+        type="search"
+        [value]="searchText()"
+        (input)="onSearch($any($event.target).value); applyFilters()"
+        placeholder="Search dishes…"
+        class="focus-ring menu-search-input h-11 w-full rounded-2xl border border-slate-200/90 bg-white px-3.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-brand-400 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900/90 dark:placeholder:text-slate-500 sm:flex-1"
+      />
+
+      <label class="sr-only" for="menu-category">Category</label>
+      <select
+        id="menu-category"
+        [value]="selectedCategory()"
+        (change)="onCategory($any($event.target).value); applyFilters()"
+        class="focus-ring menu-search-input h-11 w-full rounded-2xl border border-slate-200/90 bg-white px-3.5 text-sm shadow-sm focus:border-brand-400 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900/90 sm:w-44 md:w-52"
+      >
+        @for (c of categories(); track c) {
+          <option [value]="c">{{ c | titlecase }}</option>
+        }
+      </select>
+    </div>
+
+    @if (loading()) {
+      <div class="mt-5 grid grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+        @for (_ of [1, 2, 3, 4, 5, 6, 7, 8]; track _) {
+          <ui-card>
+            <ui-skeleton class="mb-3 block" height="9rem" rounded="lg" />
+            <ui-skeleton class="mb-2 block" height="0.875rem" width="70%" />
+            <ui-skeleton class="mb-3 block" height="0.75rem" width="40%" />
+            <ui-skeleton class="block" height="2.5rem" rounded="lg" />
+          </ui-card>
+        }
+      </div>
+    } @else if (filteredItems().length === 0) {
+      <div class="mt-8">
+        <ui-empty-state
+          icon="🥗"
+          title="No dishes match"
+          description="Try another search or pick a different category."
+        />
+      </div>
+    } @else {
+      <h2 class="sr-only">Menu</h2>
+      <div class="mt-5 grid grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+        @for (item of filteredItems(); track item._id) {
+          <ui-card
+            class="group flex flex-col overflow-hidden transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lift"
+          >
+            <div class="-mx-3 -mt-3 mb-2.5 overflow-hidden sm:-mx-4 sm:-mt-4 sm:mb-3">
+              <img
+                [src]="item.image || 'https://placehold.co/600x400/f97316/ffffff?text=Food'"
+                [alt]="item.name"
+                class="menu-item-img h-36 w-full object-cover transition duration-300 group-hover:scale-[1.02] sm:h-40"
+                loading="lazy"
+              />
             </div>
-            <p class="mt-2 min-h-10 text-[13px] leading-5 text-slate-600 dark:text-slate-300 [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical] overflow-hidden">
-              {{ item.description || 'Freshly prepared with premium ingredients and served hot.' }}
-            </p>
-            <div class="mt-3 flex items-center justify-between gap-2">
-              <span class="text-base font-bold tabular-nums text-slate-900 dark:text-white">
-                ₹{{ item.price }}
-              </span>
-              <div
-                class="flex items-center gap-1 rounded-xl border border-slate-200/80 bg-slate-50 p-0.5 dark:border-slate-600 dark:bg-slate-800/80"
+            <div class="flex flex-1 flex-col">
+              <h5
+                class="menu-item-name text-[0.9375rem] font-semibold leading-snug tracking-tight text-slate-900 dark:text-white sm:text-base"
               >
-                <button
-                  type="button"
-                  class="focus-ring flex h-8 w-8 items-center justify-center rounded-lg bg-white text-base font-semibold text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-100"
-                  (click)="decrease(item)"
-                  [attr.aria-label]="'Decrease ' + item.name"
+                {{ item.name }}
+              </h5>
+              <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                <span
+                  class="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-800 dark:bg-brand-950/60 dark:text-brand-200 sm:text-[10px]"
                 >
-                  −
-                </button>
-                <span class="min-w-[1.25rem] text-center text-xs font-bold tabular-nums">
-                  {{ qty(item._id) }}
+                  {{ item.category | titlecase }}
                 </span>
-                <button
-                  type="button"
-                  class="focus-ring flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 text-base font-semibold text-white shadow-md shadow-emerald-500/30 ring-1 ring-emerald-600/20 transition hover:from-teal-400 hover:to-emerald-500 hover:shadow-lg hover:shadow-emerald-500/40 active:scale-95"
-                  (click)="increase(item)"
-                  [attr.aria-label]="'Add ' + item.name"
+              </div>
+              <p
+                class="menu-item-desc mt-1.5 min-h-[2.5rem] text-xs leading-relaxed text-slate-600 dark:text-slate-300 [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical] overflow-hidden sm:min-h-10 sm:text-[13px] sm:leading-5"
+              >
+                {{ item.description || "Freshly prepared with premium ingredients and served hot." }}
+              </p>
+              <div class="mt-2.5 flex items-center justify-between gap-2 sm:mt-3">
+                <span
+                  class="text-sm font-bold tabular-nums text-slate-900 dark:text-white sm:text-base"
                 >
-                  +
-                </button>
+                  ₹{{ item.price }}
+                </span>
+                <div
+                  class="flex items-center gap-0.5 rounded-xl border border-slate-200/90 bg-white/90 p-0.5 shadow-sm dark:border-slate-600 dark:bg-slate-800/90"
+                >
+                  <button
+                    type="button"
+                    class="focus-ring flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-base font-semibold text-slate-700 transition hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                    (click)="decrease(item)"
+                    [attr.aria-label]="'Decrease ' + item.name"
+                  >
+                    −
+                  </button>
+                  <span class="min-w-[1.25rem] text-center text-xs font-bold tabular-nums text-slate-800 dark:text-slate-100">
+                    {{ qty(item._id) }}
+                  </span>
+                  <button
+                    type="button"
+                    class="focus-ring flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-orange-600 text-base font-semibold text-white shadow-md shadow-brand-500/25 ring-1 ring-orange-600/20 transition hover:brightness-105 active:scale-95"
+                    (click)="increase(item)"
+                    [attr.aria-label]="'Add ' + item.name"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </ui-card>
-      }
-    </div>
-  }
-</section>
+          </ui-card>
+        }
+      </div>
+    }
+  </section>
 
-<a
-  routerLink="/customer/cart"
-  class="focus-ring fixed bottom-3 right-3 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-teal-500 via-emerald-500 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xl shadow-emerald-500/40 ring-2 ring-white/40 transition hover:from-teal-400 hover:to-emerald-500 hover:shadow-2xl hover:shadow-emerald-500/50 active:scale-[0.98] sm:bottom-5 sm:right-4"
-  style="margin-bottom: max(0.5rem, env(safe-area-inset-bottom))"
-  [attr.aria-label]="'Cart, ' + cartCount() + ' items'"
->
-  <span class="text-base leading-none" aria-hidden="true">🛒</span>
-  <span>Cart</span>
-  <span
-    class="min-w-[1.25rem] rounded-full bg-black/20 px-1.5 py-0.5 text-center text-xs font-bold tabular-nums"
-    >{{ cartCount() }}</span
+  <a
+    routerLink="/customer/cart"
+    class="focus-ring menu-cart-fab fixed right-3 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-500 via-brand-500 to-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xl shadow-brand-500/35 ring-2 ring-white/50 transition hover:brightness-[1.05] hover:shadow-2xl hover:shadow-brand-500/30 active:scale-[0.98] dark:ring-slate-900/60 sm:bottom-5 sm:right-4"
+    style="bottom: max(0.75rem, env(safe-area-inset-bottom, 0px))"
+    [attr.aria-label]="'Cart, ' + cartCount() + ' items'"
   >
-</a>
+    <span class="text-base leading-none" aria-hidden="true">🛒</span>
+    <span>Cart</span>
+    <span
+      class="min-w-[1.25rem] rounded-full bg-black/25 px-1.5 py-0.5 text-center text-xs font-bold tabular-nums"
+      >{{ cartCount() }}</span
+    >
+  </a>
+</div>

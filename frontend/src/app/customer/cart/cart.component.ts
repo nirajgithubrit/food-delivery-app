@@ -6,6 +6,7 @@ import {
   signal,
 } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
+import { finalize } from "rxjs";
 import { ApiService } from "../../services/api.service";
 import { CartService } from "../../services/cart.service";
 import { ToastService } from "../../shared/services/toast.service";
@@ -39,6 +40,9 @@ export class CartComponent {
 
   readonly paymentMethod = signal<"cod" | "upi">("cod");
 
+  /** Prevents double taps creating multiple orders while location/API runs. */
+  readonly placingOrder = signal(false);
+
   readonly total = computed(() =>
     this.cartItems().reduce((sum, item) => sum + item.price * item.qty, 0),
   );
@@ -56,6 +60,8 @@ export class CartComponent {
   }
 
   placeOrder(): void {
+    if (this.placingOrder()) return;
+
     const items = this.cartItems();
     if (!items.length) return;
 
@@ -63,6 +69,8 @@ export class CartComponent {
       this.toast.error("Location is required to place an order.");
       return;
     }
+
+    this.placingOrder.set(true);
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -77,21 +85,27 @@ export class CartComponent {
           paymentMethod: this.paymentMethod(),
         };
 
-        this.api.placeOrder(orderData).subscribe({
-          next: (res: any) => {
-            localStorage.setItem("orderId", res._id);
-            this.cart.clear();
-            this.toast.success("Order placed! Track it live.");
-            this.router.navigate(["/customer/track"]);
-          },
-          error: (err) => {
-            const msg =
-              err.error?.error?.message ?? err.message ?? "Could not place order";
-            this.toast.error(msg);
-          },
-        });
+        this.api
+          .placeOrder(orderData)
+          .pipe(finalize(() => this.placingOrder.set(false)))
+          .subscribe({
+            next: (res: any) => {
+              localStorage.setItem("orderId", res._id);
+              this.cart.clear();
+              this.toast.success("Order placed! Track it live.");
+              this.router.navigate(["/customer/track"]);
+            },
+            error: (err) => {
+              const msg =
+                err.error?.error?.message ??
+                err.message ??
+                "Could not place order";
+              this.toast.error(msg);
+            },
+          });
       },
       () => {
+        this.placingOrder.set(false);
         this.toast.error("Allow location access to deliver to your address.");
       },
       { enableHighAccuracy: true, timeout: 12000 },

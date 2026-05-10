@@ -43,6 +43,8 @@ exports.placeOrder = asyncHandler(async (req, res) => {
       lat: config.restaurant.lat,
       lng: config.restaurant.lng,
     },
+    restaurantName: config.restaurant.name,
+    restaurantPhone: config.restaurant.phone,
   });
 
   const io = req.app.get("io");
@@ -86,8 +88,8 @@ exports.getCustomerOrders = asyncHandler(async (req, res) => {
   const enriched = orders.map((o) => ({
     ...o,
     deliveryBoy: o.deliveryBoyId ? ridersById[String(o.deliveryBoyId)] || null : null,
-    restaurantName: config.restaurant.name,
-    restaurantPhone: config.restaurant.phone,
+    restaurantName: o.restaurantName || config.restaurant.name,
+    restaurantPhone: o.restaurantPhone || config.restaurant.phone,
   }));
 
   ApiResponse.success(res, enriched);

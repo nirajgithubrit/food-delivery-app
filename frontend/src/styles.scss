@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Outfit:wght@500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -16,6 +16,36 @@
   body {
     @apply font-sans antialiased bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /*
+   * iOS Safari zooms the viewport when focused inputs use font-size < 16px.
+   * Enforce 16px on small screens project-wide; exclude non-text controls below.
+   */
+  @media screen and (max-width: 767px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"],
+    input[type="range"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    input[type="image"],
+    input[type="file"],
+    input[type="color"],
+    input[type="hidden"] {
+      font-size: inherit !important;
+    }
+  }
+
+  app-root {
+    display: block;
+    min-height: 100dvh;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -36,6 +66,15 @@
 
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950;
+  }
+
+  /* Login only: theme toggle bottom-right on small screens (see app.component.html) */
+  @media (max-width: 767px) {
+    app-theme-toggle.login-theme-bottom-mobile {
+      top: auto !important;
+      bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+      z-index: 9999;
+    }
   }
 }
 

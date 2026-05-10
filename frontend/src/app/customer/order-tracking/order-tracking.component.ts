@@ -10,6 +10,7 @@ import {
 } from "@angular/core";
 import { ApiService } from "../../services/api.service";
 import { SocketService } from "../../services/socket.service";
+import { NotificationSoundService } from "../../shared/services/notification-sound.service";
 import { ToastService } from "../../shared/services/toast.service";
 import { CommonModule } from "@angular/common";
 import { RouterLink } from "@angular/router";
@@ -37,6 +38,7 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
   private readonly socket = inject(SocketService);
   private readonly zone = inject(NgZone);
   private readonly toast = inject(ToastService);
+  private readonly notifySound = inject(NotificationSoundService);
 
   readonly order = signal<any | null>(null);
   readonly loading = signal(true);
@@ -135,21 +137,21 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
         this.eta.set("");
         this.directionsResults.set(undefined);
       } else if (statusChanged || pickupChanged) {
-        new Audio("notify.wav").play().catch(() => undefined);
+        this.notifySound.play();
       }
 
       this.prevStatus = data.status;
       this.prevPickupStatus = data.pickupStatus;
       this.prevRiderId = data.deliveryBoyId ?? null;
 
-      // Preserve enriched fields (deliveryBoy, restaurantPhone) from the
-      // initial fetch since socket payloads don't include them.
+      // Rider name/phone still come from /orders/me enrichment; restaurant
+      // name/phone are on the order document once persisted.
       const prev = this.order();
       this.order.set({
         ...data,
-        deliveryBoy: prev?.deliveryBoy ?? null,
-        restaurantName: prev?.restaurantName,
-        restaurantPhone: prev?.restaurantPhone,
+        deliveryBoy: data.deliveryBoy ?? prev?.deliveryBoy ?? null,
+        restaurantName: data.restaurantName || prev?.restaurantName,
+        restaurantPhone: data.restaurantPhone || prev?.restaurantPhone,
       });
 
       // Rider just got assigned (or changed) — refetch to pick up rider name/phone.
