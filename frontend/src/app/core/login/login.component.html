@@ -4,18 +4,19 @@
   >
     <header
       class="login-premium-hero relative z-[1] flex h-[min(26dvh,11rem)] shrink-0 flex-col items-center justify-end overflow-hidden px-4 pb-8 text-center pt-[max(1rem,env(safe-area-inset-top,0px))] sm:h-[min(28dvh,12rem)] sm:px-6 sm:pb-9 sm:pt-[max(1.25rem,env(safe-area-inset-top,0px))] md:h-[min(30dvh,13.5rem)] md:px-8 md:pb-10 md:pt-[max(1.5rem,env(safe-area-inset-top,0px))] lg:h-[min(32dvh,14.5rem)]"
-      aria-label="Gir Gamathi"
+      aria-label="Gir Gamthi"
     >
       <div class="login-premium-hero-bg" aria-hidden="true"></div>
       <div class="login-premium-hero-vignette" aria-hidden="true"></div>
       <div class="login-premium-hero-shine" aria-hidden="true"></div>
 
       <div class="relative z-10 max-w-lg px-1">
-        <h1
-          class="login-premium-title font-hero text-[clamp(1.65rem,6.5vw,3.75rem)] font-semibold leading-[1.06] tracking-tight text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.35)] sm:text-[clamp(2rem,7vw,3.75rem)]"
+        <div
+          class="login-premium-title font-hero text-[clamp(1.5rem,5.8vw,3.5rem)] font-semibold leading-[1.06] tracking-tight text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.35)] sm:text-[clamp(1.85rem,6.2vw,3.75rem)]"
+          id="login-customer-brand-title"
         >
-          Gir Gamathi
-        </h1>
+          Gir Gamthi
+        </div>
         <p
           class="login-premium-welcome mt-1.5 text-xs font-medium text-white/85 sm:mt-3 sm:text-sm md:text-base max-md:line-clamp-2"
         >
@@ -32,20 +33,16 @@
       >
         <div class="login-premium-card-inner px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-7">
           <div class="text-center">
-            <h2
-              class="font-display text-base font-bold text-slate-900 dark:text-white sm:text-xl"
+            <p
+              class="font-display text-base font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-lg md:text-xl"
             >
               Sign in
-            </h2>
+            </p>
             <p
               class="mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400 sm:mt-1.5 sm:text-sm"
             >
               @if (!otpSent()) {
-                @if (!phoneReadyForCaptcha()) {
-                  Enter your mobile number, then tap Send OTP
-                } @else {
-                  Complete verification below, then tap Send OTP
-                }
+                Enter your mobile number, then tap Send OTP
               } @else {
                 Enter the code we sent you
               }
@@ -74,7 +71,6 @@
                     <input
                       id="cust-phone"
                       [(ngModel)]="phone"
-                      (ngModelChange)="onCustomerPhoneChange()"
                       inputmode="numeric"
                       maxlength="10"
                       placeholder="10-digit number"
@@ -87,7 +83,7 @@
                 <button
                   type="button"
                   class="login-premium-cta focus-ring flex min-h-[2.85rem] w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-500 via-brand-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-[0_4px_14px_-2px_rgba(249,115,22,0.55)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:shadow-[0_8px_24px_-4px_rgba(249,115,22,0.45)] hover:brightness-[1.02] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[3.1rem] sm:text-base"
-                  [disabled]="sendingOtp() || !phoneReadyForCaptcha()"
+                  [disabled]="sendingOtp() || !phoneDigitsValid()"
                   (click)="sendOTP()"
                 >
                   @if (sendingOtp()) {
@@ -100,12 +96,6 @@
                     <span>Send OTP</span>
                   }
                 </button>
-
-                <div
-                  id="recaptcha"
-                  class="login-recaptcha-host flex shrink-0 justify-center"
-                  [class.login-recaptcha-host--hidden]="!phoneReadyForCaptcha()"
-                ></div>
               </div>
             } @else {
               <div class="flex flex-col gap-3 sm:gap-4">
@@ -148,6 +138,14 @@
                   />
                 </div>
 
+                @if (backendVerifying()) {
+                  <p
+                    class="rounded-xl border border-emerald-200/90 bg-emerald-50/90 px-3 py-2 text-center text-xs font-medium text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-100"
+                  >
+                    Signing you in…
+                  </p>
+                }
+
                 <button
                   type="button"
                   class="login-premium-cta focus-ring flex min-h-[2.85rem] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-500 via-brand-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-[0_4px_14px_-2px_rgba(249,115,22,0.55)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:shadow-[0_8px_24px_-4px_rgba(249,115,22,0.45)] hover:brightness-[1.02] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[3.1rem] sm:text-base"
@@ -166,10 +164,15 @@
                 </button>
                 <button
                   type="button"
-                  class="focus-ring py-1.5 text-center text-[11px] font-semibold text-slate-600 transition-colors hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 sm:text-sm"
+                  class="focus-ring py-1.5 text-center text-[11px] font-semibold text-slate-600 transition-colors hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-45 dark:text-slate-400 dark:hover:text-brand-400 sm:text-sm"
+                  [disabled]="otpResendIn() > 0 || sendingOtp() || verifyingOtp()"
                   (click)="resendOTP()"
                 >
-                  Resend OTP
+                  @if (otpResendIn() > 0) {
+                    Resend in {{ otpResendIn() }}s
+                  } @else {
+                    Resend OTP
+                  }
                 </button>
               </div>
             }
@@ -177,6 +180,13 @@
         </div>
       </div>
     </main>
+    <!-- Host keeps #firebase-recaptcha in the DOM for the whole customer session (fixed slot avoids overflow/transform clipping). -->
+    <div
+      class="pointer-events-none fixed bottom-0 left-0 z-[100] min-h-px min-w-px opacity-0"
+      aria-hidden="true"
+    >
+      <div id="firebase-recaptcha"></div>
+    </div>
   </div>
 } @else {
   <div
@@ -184,22 +194,22 @@
   >
     <header
       class="login-staff-hero relative z-[1] flex min-h-[11.5rem] shrink-0 flex-col items-center justify-center overflow-hidden px-4 pb-8 text-center pt-[max(1.25rem,env(safe-area-inset-top,0px))] h-[min(30dvh,13.5rem)] sm:min-h-[12rem] sm:px-6 sm:pb-9 sm:pt-[max(1.35rem,env(safe-area-inset-top,0px))] sm:h-[min(32dvh,14.5rem)] md:min-h-[13rem] md:px-8 md:pb-10 md:pt-[max(1.5rem,env(safe-area-inset-top,0px))] md:h-[min(34dvh,15rem)]"
-      [attr.aria-label]="loginMode() === 'admin' ? 'Admin' : 'Rider'"
+      [attr.aria-label]="loginMode() === 'admin' ? 'Admin sign in' : 'Rider sign in'"
     >
       <div class="login-staff-hero-bg" aria-hidden="true"></div>
       <div class="login-staff-hero-vignette" aria-hidden="true"></div>
 
       <div class="relative z-10 max-w-md px-1">
-        <p class="font-hero text-lg font-semibold text-white/90 sm:text-xl">Gir Gamathi</p>
-        <h2
-          class="mt-0.5 font-display text-[clamp(1.25rem,5vw,1.75rem)] font-bold text-white drop-shadow-sm sm:text-2xl"
+        <p class="font-hero text-lg font-semibold text-white/90 sm:text-xl">Gir Gamthi</p>
+        <p
+          class="mt-0.5 font-display text-[clamp(1.1rem,4.2vw,1.65rem)] font-bold leading-tight tracking-tight text-white drop-shadow-sm sm:text-xl md:text-2xl"
         >
           @if (loginMode() === "admin") {
             Admin sign in
           } @else {
             Rider sign in
           }
-        </h2>
+        </p>
       </div>
     </header>
 
@@ -249,6 +259,12 @@
               >
                 Continue
               </button>
+              <a
+                routerLink="/admin/register"
+                class="block text-center text-[11px] font-semibold text-brand-600 no-underline hover:underline dark:text-brand-400 sm:text-sm"
+              >
+                Create restaurant account
+              </a>
             </div>
           }
 

@@ -4,7 +4,8 @@ const ApiResponse = require("../utils/apiResponse");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../middleware/asyncHandler");
 const { assertStatusTransition } = require("../utils/orderTransitions");
-const config = require("../config");
+const { getPrimaryRestaurantSnapshot } = require("../utils/restaurantResolve");
+const { notifyUsersByRole, notifyUserById } = require("../utils/fcm");
 
 exports.placeOrder = asyncHandler(async (req, res) => {
   const {
@@ -27,6 +28,8 @@ exports.placeOrder = asyncHandler(async (req, res) => {
     image: item?.image || "",
   }));
 
+  const rest = await getPrimaryRestaurantSnapshot();
+
   const order = await Order.create({
     userId: String(req.user.id),
     items: safeItems,
@@ -40,16 +43,22 @@ exports.placeOrder = asyncHandler(async (req, res) => {
     deliveryBoyId: null,
     rejectedBy: [],
     restaurantLocation: {
-      lat: config.restaurant.lat,
-      lng: config.restaurant.lng,
+      lat: rest.lat,
+      lng: rest.lng,
     },
-    restaurantName: config.restaurant.name,
-    restaurantPhone: config.restaurant.phone,
+    restaurantName: rest.name,
+    restaurantPhone: rest.phone,
   });
 
   const io = req.app.get("io");
   io.emit("new-order-admin", order);
   io.emit("new-order", order);
+
+  void notifyUsersByRole(
+    "admin",
+    { title: "New order", body: `Order ${String(order._id).slice(-6)} · ₹${order.totalAmount}` },
+    { type: "new_order", orderId: String(order._id) },
+  );
 
   ApiResponse.success(res, order, 201);
 });
@@ -63,6 +72,8 @@ exports.getCustomerOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find({ userId: String(req.user.id) })
     .sort({ createdAt: -1 })
     .lean();
+
+  const restFallback = await getPrimaryRestaurantSnapshot();
 
   // Collect distinct rider ids that are valid ObjectIds, then attach rider info.
   const riderIds = [
@@ -88,8 +99,8 @@ exports.getCustomerOrders = asyncHandler(async (req, res) => {
   const enriched = orders.map((o) => ({
     ...o,
     deliveryBoy: o.deliveryBoyId ? ridersById[String(o.deliveryBoyId)] || null : null,
-    restaurantName: o.restaurantName || config.restaurant.name,
-    restaurantPhone: o.restaurantPhone || config.restaurant.phone,
+    restaurantName: o.restaurantName || restFallback.name,
+    restaurantPhone: o.restaurantPhone || restFallback.phone,
   }));
 
   ApiResponse.success(res, enriched);
@@ -170,6 +181,27 @@ exports.updateOrder = asyncHandler(async (req, res) => {
     io.emit("order-removed", idStr);
   }
 
+  const shortId = idStr.slice(-6);
+  if (status === "confirmed") {
+    void notifyUserById(
+      order.userId,
+      { title: "Order confirmed", body: `Order #${shortId} was accepted` },
+      { type: "order_confirmed", orderId: idStr },
+    );
+  } else if (status === "inprogress") {
+    void notifyUserById(
+      order.userId,
+      { title: "Out for delivery", body: `Order #${shortId} is on the way` },
+      { type: "order_inprogress", orderId: idStr },
+    );
+  } else if (status === "completed") {
+    void notifyUserById(
+      order.userId,
+      { title: "Delivered", body: `Order #${shortId} completed` },
+      { type: "order_completed", orderId: idStr },
+    );
+  }
+
   ApiResponse.success(res, order);
 });
 
@@ -189,6 +221,13 @@ exports.markPickup = asyncHandler(async (req, res) => {
   const io = req.app.get("io");
   io.to(order._id.toString()).emit("order-updated", order);
   io.emit("order-updated", order);
+
+  void notifyUserById(
+    order.userId,
+    { title: "Order picked up", body: `Rider picked up order #${order._id.toString().slice(-6)}` },
+    { type: "order_picked_up", orderId: order._id.toString() },
+  );
+
   ApiResponse.success(res, order);
 });
 
@@ -252,6 +291,19 @@ exports.assignDelivery = asyncHandler(async (req, res) => {
     const io = req.app.get("io");
     io.emit("order-removed", updated._id.toString());
     io.emit("order-updated", updated);
+
+    const oid = String(updated._id);
+    const tail = oid.slice(-6);
+    void notifyUserById(
+      updated.userId,
+      { title: "Rider assigned", body: `A partner is on the way for #${tail}` },
+      { type: "delivery_assigned", orderId: oid },
+    );
+    void notifyUserById(
+      riderId,
+      { title: "New delivery", body: `You have order #${tail}` },
+      { type: "delivery_assigned_rider", orderId: oid },
+    );
 
     ApiResponse.success(res, updated);
   } catch (err) {

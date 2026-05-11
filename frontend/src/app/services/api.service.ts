@@ -101,12 +101,49 @@ export class ApiService {
     return this.http.put(`${this.baseUrl}/orders/${orderId}/payment/verify`, {}, { withCredentials: true });
   }
 
-  loginCustomer(phone: string) {
-    return this.http.post(`${this.baseUrl}/auth/customer`, { phone }, { withCredentials: true });
+  registerAdmin(formData: FormData) {
+    return this.http.post(`${this.baseUrl}/auth/admin/register`, formData, {
+      withCredentials: true,
+    });
   }
 
   loginAdmin(email: string, password: string) {
     return this.http.post(`${this.baseUrl}/auth/admin`, { email, password }, { withCredentials: true });
+  }
+
+  getRestaurantProfile(): Observable<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(`${this.baseUrl}/restaurant/me`, {
+      withCredentials: true,
+    });
+  }
+
+  updateRestaurantProfile(body: Record<string, unknown>) {
+    return this.http.put(`${this.baseUrl}/restaurant/me`, body, { withCredentials: true });
+  }
+
+  updateRestaurantImages(formData: FormData) {
+    return this.http.put(`${this.baseUrl}/restaurant/me/images`, formData, {
+      withCredentials: true,
+    });
+  }
+
+  changeAdminPassword(currentPassword: string, newPassword: string) {
+    return this.http.put(`${this.baseUrl}/restaurant/me/password`, { currentPassword, newPassword }, {
+      withCredentials: true,
+    });
+  }
+
+  getAnalyticsOverview(params?: { from?: string; to?: string }) {
+    return this.http.get(`${this.baseUrl}/analytics/overview`, {
+      params: params as Record<string, string>,
+      withCredentials: true,
+    });
+  }
+
+  registerFcmToken(token: string) {
+    return this.http.post(`${this.baseUrl}/notifications/fcm-token`, { token }, {
+      withCredentials: true,
+    });
   }
 
   loginDelivery(phone: string, name: string) {

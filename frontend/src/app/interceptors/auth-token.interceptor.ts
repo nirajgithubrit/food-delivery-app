@@ -1,6 +1,12 @@
 import { HttpInterceptorFn } from "@angular/common/http";
 
-const LOGIN_POST_PATH_MARKERS = ["/auth/customer", "/auth/admin", "/auth/delivery"];
+const LOGIN_POST_PATH_MARKERS = [
+  "/auth/firebase-login",
+  "/auth/refresh",
+  "/auth/admin",
+  "/auth/admin/register",
+  "/auth/delivery",
+];
 
 function isAuthLoginPost(req: { method: string; url: string }): boolean {
   if (req.method !== "POST") return false;
