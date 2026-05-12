@@ -15,6 +15,8 @@ interface WrappedRefreshResponse {
   data: { token: string; refreshToken: string; role?: string };
 }
 
+export type AppRole = "customer" | "admin" | "delivery";
+
 @Injectable({ providedIn: "root" })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -44,7 +46,7 @@ export class AuthService {
    * Uses HttpBackend so refresh does not recurse through interceptors.
    */
   refreshSession(): Observable<void> {
-    const rt = sessionStorage.getItem("refreshToken");
+    const rt = this.readRefreshToken();
     if (!rt) {
       return throwError(() => new Error("No refresh token"));
     }
@@ -73,34 +75,77 @@ export class AuthService {
   }
 
   persistTokens(access: string, refresh: string): void {
-    sessionStorage.setItem("authToken", access);
-    sessionStorage.setItem("refreshToken", refresh);
+    this.setStorage("authToken", access);
+    this.setStorage("refreshToken", refresh);
     this.accessToken.set(access);
     this.refreshTokenStored.set(refresh);
   }
 
   clearTokens(): void {
-    sessionStorage.removeItem("authToken");
-    sessionStorage.removeItem("refreshToken");
+    this.removeStorage("authToken");
+    this.removeStorage("refreshToken");
     this.accessToken.set(null);
     this.refreshTokenStored.set(null);
   }
 
   /** Admin / rider flows issue a long-lived access JWT only (no refresh). */
   setLegacySession(access: string): void {
-    sessionStorage.setItem("authToken", access);
-    sessionStorage.removeItem("refreshToken");
+    this.setStorage("authToken", access);
+    this.removeStorage("refreshToken");
     this.accessToken.set(access);
     this.refreshTokenStored.set(null);
   }
 
+  getCurrentRole(): AppRole | null {
+    return this.parseRole(this.accessToken()) || this.parseRole(this.refreshTokenStored());
+  }
+
+  clearClientSessionData(): void {
+    this.clearTokens();
+    this.removeStorage("user");
+    this.removeStorage("orderId");
+    this.removeStorage("deliveryUser");
+    this.removeStorage("deliveryName");
+  }
+
   private readAccessToken(): string | null {
-    if (typeof sessionStorage === "undefined") return null;
-    return sessionStorage.getItem("authToken");
+    return this.readStorage("authToken");
   }
 
   private readRefreshToken(): string | null {
-    if (typeof sessionStorage === "undefined") return null;
-    return sessionStorage.getItem("refreshToken");
+    return this.readStorage("refreshToken");
+  }
+
+  private readStorage(key: string): string | null {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem(key) || localStorage.getItem(key);
+  }
+
+  private setStorage(key: string, value: string): void {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem(key, value);
+    localStorage.setItem(key, value);
+  }
+
+  private removeStorage(key: string): void {
+    if (typeof window === "undefined") return;
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  }
+
+  private parseRole(token: string | null): AppRole | null {
+    if (!token) return null;
+    try {
+      const payload = token.split(".")[1];
+      if (!payload) return null;
+      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+      const decoded = JSON.parse(atob(normalized)) as { role?: string };
+      if (decoded.role === "customer" || decoded.role === "admin" || decoded.role === "delivery") {
+        return decoded.role;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 }

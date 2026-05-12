@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { Router } from "@angular/router";
-import { ApiService } from "../../../services/api.service";
+import { AuthService, AppRole } from "../../../services/auth.service";
 import { SocketService } from "../../../services/socket.service";
 import { ToastService } from "../../services/toast.service";
 
@@ -51,7 +51,7 @@ import { ToastService } from "../../services/toast.service";
   `,
 })
 export class LogoutButtonComponent {
-  private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly socket = inject(SocketService);
@@ -61,20 +61,17 @@ export class LogoutButtonComponent {
   logout(): void {
     if (this.busy()) return;
     this.busy.set(true);
+    const role = this.auth.getCurrentRole();
 
-    this.api.logout().subscribe({
-      next: () => this.finalize(true),
-      error: () => this.finalize(false),
+    this.auth.logout().subscribe({
+      next: () => this.finalize(true, role),
+      error: () => this.finalize(false, role),
     });
   }
 
-  private finalize(serverOk: boolean): void {
+  private finalize(serverOk: boolean, role: AppRole | null): void {
     try {
-      sessionStorage.removeItem("authToken");
-      localStorage.removeItem("user");
-      localStorage.removeItem("orderId");
-      localStorage.removeItem("deliveryUser");
-      localStorage.removeItem("deliveryName");
+      this.auth.clearClientSessionData();
     } catch {
       /* no-op */
     }
@@ -92,6 +89,12 @@ export class LogoutButtonComponent {
     }
 
     this.busy.set(false);
-    this.router.navigate(["/"]);
+    const redirect =
+      role === "admin"
+        ? ["/admin", "login"]
+        : role === "delivery"
+          ? ["/rider", "login"]
+          : ["/"];
+    this.router.navigate(redirect);
   }
 }
