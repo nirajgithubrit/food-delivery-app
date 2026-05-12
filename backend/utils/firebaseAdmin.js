@@ -3,6 +3,12 @@ const AppError = require("./AppError");
 
 let app;
 
+function normalizePrivateKey(raw) {
+  if (!raw || typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  return trimmed.includes("\\n") ? trimmed.replace(/\\n/g, "\n") : trimmed;
+}
+
 function parseServiceAccount() {
   const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (rawJson && rawJson.trim()) {
@@ -15,13 +21,17 @@ function parseServiceAccount() {
 
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
-    : "";
+  const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
 
   if (!projectId || !clientEmail || !privateKey) {
     throw new AppError(
       "Firebase Admin is not configured. Set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY.",
+      500,
+    );
+  }
+  if (!privateKey.includes("BEGIN PRIVATE KEY")) {
+    throw new AppError(
+      "FIREBASE_PRIVATE_KEY is malformed. Include the full PEM key with BEGIN/END lines.",
       500,
     );
   }
@@ -46,8 +56,16 @@ function getFirebaseAdminApp() {
 async function verifyFirebaseIdToken(idToken) {
   try {
     getFirebaseAdminApp();
-    return await admin.auth().verifyIdToken(idToken, true);
-  } catch {
+    return await admin.auth().verifyIdToken(idToken, false);
+  } catch (err) {
+    const logLevel = String(process.env.LOG_LEVEL || "").toLowerCase();
+    if (process.env.NODE_ENV !== "production" || logLevel === "debug") {
+      // eslint-disable-next-line no-console
+      console.error(
+        "[Firebase Admin] verifyIdToken failed:",
+        err?.code || err?.message || err,
+      );
+    }
     throw new AppError("Invalid Firebase token", 401);
   }
 }

@@ -180,12 +180,11 @@
         </div>
       </div>
     </main>
-    <!-- Host keeps #firebase-recaptcha in the DOM for the whole customer session (fixed slot avoids overflow/transform clipping). -->
+    <!-- Host keeps #firebase-recaptcha in the DOM for the whole customer session. -->
     <div
-      class="pointer-events-none fixed bottom-0 left-0 z-[100] min-h-px min-w-px opacity-0"
-      aria-hidden="true"
+      class="pointer-events-none fixed bottom-0 left-0 z-[100] h-px w-px overflow-hidden opacity-0"
     >
-      <div id="firebase-recaptcha"></div>
+      <div id="firebase-recaptcha" class="h-px w-px"></div>
     </div>
   </div>
 } @else {
