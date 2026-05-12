@@ -164,8 +164,12 @@
                 >
                   <map-marker [position]="markerPosition()" [icon]="bikeIcon"></map-marker>
                   <map-marker [position]="customerLocation()"></map-marker>
-                  @if (directionsResults(); as dir) {
-                    <map-directions-renderer [directions]="dir"></map-directions-renderer>
+                  @if (usePolylineForRoute && routePolylinePath().length) {
+                    <map-polyline [options]="polylineOptions()"></map-polyline>
+                  } @else {
+                    @if (directionsResults(); as dir) {
+                      <map-directions-renderer [directions]="dir"></map-directions-renderer>
+                    }
                   }
                 </google-map>
 

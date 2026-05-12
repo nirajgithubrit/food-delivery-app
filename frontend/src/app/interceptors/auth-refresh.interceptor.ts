@@ -12,6 +12,8 @@ const SKIP_REFRESH_FOR_URL_PARTS = [
   "/auth/admin",
   "/auth/admin/register",
   "/auth/delivery",
+  /** Admin / delivery sessions have no refresh token — avoid refresh storms on 401s. */
+  "/notifications/",
 ];
 
 function shouldSkipRefresh(url: string): boolean {

@@ -176,7 +176,9 @@
             <google-map height="200px" width="100%" [center]="center" [zoom]="zoom">
               <map-marker [position]="riderPosition"></map-marker>
               <map-marker [position]="target"></map-marker>
-              @if (directionsResults) {
+              @if (usePolylineForRoute && routePolylinePath.length) {
+                <map-polyline [options]="routePolylineOptions"></map-polyline>
+              } @else if (directionsResults) {
                 <map-directions-renderer [directions]="directionsResults"></map-directions-renderer>
               }
             </google-map>

@@ -17,6 +17,10 @@ import { RouterLink } from "@angular/router";
 import { GoogleMapsModule } from "@angular/google-maps";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
+import {
+  directionsOverviewToPath,
+  isIosStandaloneWebApp,
+} from "../../shared/utils/maps-route";
 
 @Component({
   selector: "app-order-tracking",
@@ -50,6 +54,20 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
   directionsResults = signal<google.maps.DirectionsResult | undefined>(
     undefined,
   );
+  /** On iOS installed PWA, draw the route with a polyline (DirectionsRenderer sync issues). */
+  readonly usePolylineForRoute = isIosStandaloneWebApp();
+  readonly routePolylinePath = signal<google.maps.LatLngLiteral[]>([]);
+
+  readonly polylineOptions = computed(
+    (): google.maps.PolylineOptions => ({
+      path: this.routePolylinePath(),
+      strokeColor: "#2563eb",
+      strokeWeight: 4,
+      strokeOpacity: 1,
+      geodesic: true,
+    }),
+  );
+
   eta = signal("");
   customerLocation = signal<google.maps.LatLngLiteral>({ lat: 0, lng: 0 });
   restaurantLocation = signal<google.maps.LatLngLiteral>({ lat: 0, lng: 0 });
@@ -136,6 +154,7 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
         );
         this.eta.set("");
         this.directionsResults.set(undefined);
+        this.routePolylinePath.set([]);
       } else if (statusChanged || pickupChanged) {
         this.notifySound.play();
       }
@@ -224,6 +243,7 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
         if (o.status === "rejected") {
           this.eta.set("");
           this.directionsResults.set(undefined);
+          this.routePolylinePath.set([]);
         } else {
           const start = o.deliveryLocation || this.restaurantLocation();
           this.markerPosition.set(start);
@@ -319,8 +339,11 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
         this.zone.run(() => {
           if (status === "OK" && result) {
             this.directionsResults.set(result);
+            this.routePolylinePath.set(directionsOverviewToPath(result));
             const leg = result.routes[0].legs[0];
             this.eta.set(leg.duration?.text || "");
+          } else {
+            this.routePolylinePath.set([]);
           }
         });
       },

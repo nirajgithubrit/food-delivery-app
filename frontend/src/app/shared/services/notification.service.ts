@@ -77,7 +77,19 @@ export class NotificationService {
         serviceWorkerRegistration: registration,
       });
     } catch (err) {
-      console.warn("[FCM] getToken failed", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes("installations") ||
+        msg.includes("PERMISSION_DENIED") ||
+        msg.includes("firebaseinstallations")
+      ) {
+        console.warn(
+          "[FCM] Firebase Installations was blocked (403). In Google Cloud Console → APIs & Services → Credentials → select the **Browser key** used in `environment.firebase.apiKey` → Application restrictions / API restrictions: allow the **Firebase Installations API** for your web origins (or temporarily use “Don’t restrict key” to confirm). VAPID alone does not fix this.",
+          err,
+        );
+      } else {
+        console.warn("[FCM] getToken failed", err);
+      }
       return;
     }
 
