@@ -8,7 +8,7 @@ import { AuthService } from "../../services/auth.service";
 import { ApiService } from "../../services/api.service";
 import { SocketService } from "../../services/socket.service";
 import { ToastService } from "../../shared/services/toast.service";
-import { PushNotificationService } from "../../shared/services/push-notification.service";
+import { NotificationService } from "../../shared/services/notification.service";
 
 describe("LoginComponent", () => {
   let component: LoginComponent;
@@ -44,7 +44,7 @@ describe("LoginComponent", () => {
         { provide: ApiService, useValue: { loginAdmin: () => of({ token: "x" }) } },
         { provide: SocketService, useValue: { reconnect: () => undefined } },
         { provide: ToastService, useValue: { success: () => undefined, error: () => undefined } },
-        { provide: PushNotificationService, useValue: { initForLoggedInUser: () => Promise.resolve() } },
+        { provide: NotificationService, useValue: { initForLoggedInUser: () => Promise.resolve() } },
       ],
     }).compileComponents();
 

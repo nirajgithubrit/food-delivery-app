@@ -54,10 +54,17 @@ exports.placeOrder = asyncHandler(async (req, res) => {
   io.emit("new-order-admin", order);
   io.emit("new-order", order);
 
+  const short = String(order._id).slice(-6);
+  const amount = order.totalAmount;
   void notifyUsersByRole(
     "admin",
-    { title: "New order", body: `Order ${String(order._id).slice(-6)} · ₹${order.totalAmount}` },
+    { title: "New order", body: `Order ${short} · ₹${amount}` },
     { type: "new_order", orderId: String(order._id) },
+  );
+  void notifyUsersByRole(
+    "delivery",
+    { title: "New order", body: `Pool order ${short} · ₹${amount}` },
+    { type: "new_order_pool", orderId: String(order._id) },
   );
 
   ApiResponse.success(res, order, 201);
@@ -199,6 +206,12 @@ exports.updateOrder = asyncHandler(async (req, res) => {
       order.userId,
       { title: "Delivered", body: `Order #${shortId} completed` },
       { type: "order_completed", orderId: idStr },
+    );
+  } else if (status === "rejected") {
+    void notifyUserById(
+      order.userId,
+      { title: "Order update", body: `Order #${shortId} was not accepted` },
+      { type: "order_rejected", orderId: idStr },
     );
   }
 

@@ -10,7 +10,7 @@ import { Router, RouterLink } from "@angular/router";
 import { GoogleMapsModule } from "@angular/google-maps";
 import { ApiService } from "../../services/api.service";
 import { ToastService } from "../../shared/services/toast.service";
-import { PushNotificationService } from "../../shared/services/push-notification.service";
+import { NotificationService } from "../../shared/services/notification.service";
 
 @Component({
   selector: "app-admin-register",
@@ -23,7 +23,7 @@ export class AdminRegisterComponent {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
-  private readonly push = inject(PushNotificationService);
+  private readonly notifications = inject(NotificationService);
 
   readonly submitting = signal(false);
 
@@ -107,7 +107,7 @@ export class AdminRegisterComponent {
     this.api.registerAdmin(fd).subscribe({
       next: (res: { token?: string }) => {
         if (res?.token) sessionStorage.setItem("authToken", res.token);
-        void this.push.initForLoggedInUser();
+        void this.notifications.initForLoggedInUser();
         this.toast.success("Restaurant account created");
         void this.router.navigate(["/admin/orders"]);
       },

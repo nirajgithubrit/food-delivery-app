@@ -70,6 +70,16 @@ async function verifyFirebaseIdToken(idToken) {
   }
 }
 
+function tryGetMessaging() {
+  try {
+    getFirebaseAdminApp();
+    return admin.messaging();
+  } catch {
+    return null;
+  }
+}
+
 module.exports = {
   verifyFirebaseIdToken,
+  tryGetMessaging,
 };

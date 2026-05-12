@@ -16,7 +16,7 @@ import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { ApiService } from "../../services/api.service";
 import { SocketService } from "../../services/socket.service";
 import { ToastService } from "../../shared/services/toast.service";
-import { PushNotificationService } from "../../shared/services/push-notification.service";
+import { NotificationService } from "../../shared/services/notification.service";
 import { FirebasePhoneAuthService } from "../firebase/firebase-phone-auth.service";
 
 export type LoginMode = "customer" | "admin" | "rider";
@@ -80,7 +80,7 @@ export class LoginComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly socket = inject(SocketService);
   private readonly toast = inject(ToastService);
-  private readonly push = inject(PushNotificationService);
+  private readonly notifications = inject(NotificationService);
   private readonly firebaseAuth = inject(FirebasePhoneAuthService);
 
   readonly loginMode = signal<LoginMode>("customer");
@@ -193,7 +193,7 @@ export class LoginComponent implements OnInit {
             next: () => {
               this.socket.reconnect();
               localStorage.setItem("user", this.phone.trim());
-              void this.push.initForLoggedInUser();
+              void this.notifications.initForLoggedInUser();
               this.toast.success("Welcome back!");
               this.router.navigate(["/customer/menu"]);
             },
@@ -250,7 +250,7 @@ export class LoginComponent implements OnInit {
           this.auth.setLegacySession(res.token);
         }
         this.socket.reconnect();
-        void this.push.initForLoggedInUser();
+        void this.notifications.initForLoggedInUser();
         this.toast.success("Admin signed in");
         this.router.navigate(["/admin/orders"]);
       },
@@ -277,7 +277,7 @@ export class LoginComponent implements OnInit {
           this.auth.setLegacySession(res.token);
         }
         this.socket.reconnect();
-        void this.push.initForLoggedInUser();
+        void this.notifications.initForLoggedInUser();
         if (res.user?._id) {
           localStorage.setItem("deliveryUser", res.user._id);
         }

@@ -146,6 +146,14 @@ export class ApiService {
     });
   }
 
+  unregisterFcmToken(token: string) {
+    return this.http.post(
+      `${this.baseUrl}/notifications/fcm-token/unregister`,
+      { token },
+      { withCredentials: true },
+    );
+  }
+
   loginDelivery(phone: string, name: string) {
     return this.http.post(
       `${this.baseUrl}/auth/delivery`,

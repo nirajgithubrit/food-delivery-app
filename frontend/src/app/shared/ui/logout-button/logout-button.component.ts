@@ -3,6 +3,7 @@ import { CommonModule } from "@angular/common";
 import { Router } from "@angular/router";
 import { AuthService, AppRole } from "../../../services/auth.service";
 import { SocketService } from "../../../services/socket.service";
+import { NotificationService } from "../../services/notification.service";
 import { ToastService } from "../../services/toast.service";
 
 @Component({
@@ -55,6 +56,7 @@ export class LogoutButtonComponent {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly socket = inject(SocketService);
+  private readonly notifications = inject(NotificationService);
 
   readonly busy = signal(false);
 
@@ -63,9 +65,11 @@ export class LogoutButtonComponent {
     this.busy.set(true);
     const role = this.auth.getCurrentRole();
 
-    this.auth.logout().subscribe({
-      next: () => this.finalize(true, role),
-      error: () => this.finalize(false, role),
+    void this.notifications.unregisterFromBackend().finally(() => {
+      this.auth.logout().subscribe({
+        next: () => this.finalize(true, role),
+        error: () => this.finalize(false, role),
+      });
     });
   }
 
