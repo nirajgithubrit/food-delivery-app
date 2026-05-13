@@ -403,13 +403,17 @@ export class DeliveryComponent implements OnInit, OnDestroy {
 
         const distance = this.getDistance(current, this.target);
         console.log('📏 Distance:', distance);
-        const isNear = distance < 0.001; // 🔥 increased threshold
+        // ~300m threshold in degrees (lat/lng); was 0.001 (~100m) and often never fired on real devices.
+        const isNear = distance < 0.003;
 
         if (
           isNear &&
           this.currentOrder.pickupStatus === 'picked'
         ) {
-          this.isArrived = true;
+          if (!this.isArrived) {
+            this.isArrived = true;
+            this.cdr.markForCheck();
+          }
         }
 
       },

@@ -14,7 +14,9 @@ import { ThemeService } from "./shared/services/theme.service";
 import { NotificationService } from "./shared/services/notification.service";
 import { ToastHostComponent } from "./shared/ui/toast-host/toast-host.component";
 import { PushNotificationCtaComponent } from "./shared/ui/push-notification-cta/push-notification-cta.component";
+import { PwaUpdatePromptComponent } from "./shared/ui/pwa-update-prompt/pwa-update-prompt.component";
 import { ThemeToggleComponent } from "./shared/ui/theme-toggle/theme-toggle.component";
+import { PwaUpdateService } from "./shared/services/pwa-update.service";
 
 function isLoginUrl(rawUrl: string): boolean {
   const path = (rawUrl.split("?")[0] || "/").replace(/\/+$/, "") || "/";
@@ -32,6 +34,7 @@ function isLoginUrl(rawUrl: string): boolean {
     ToastHostComponent,
     ThemeToggleComponent,
     PushNotificationCtaComponent,
+    PwaUpdatePromptComponent,
   ],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.scss",
@@ -40,6 +43,8 @@ function isLoginUrl(rawUrl: string): boolean {
 export class AppComponent implements OnInit, AfterViewInit {
   /** Ensures theme effect runs app-wide */
   private readonly _theme = inject(ThemeService);
+  /** Registers SW update checks in production (Netlify / PWA). */
+  private readonly _pwaUpdate = inject(PwaUpdateService);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly notifications = inject(NotificationService);

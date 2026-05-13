@@ -67,6 +67,7 @@
                 #{{ o._id.toString().slice(-5) }}
               </p>
             </div>
+            <div class="flex flex-wrap items-center justify-end gap-2">
             <span
               class="inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
               [ngClass]="{
@@ -84,35 +85,50 @@
             >
               {{ o.status | titlecase }}
             </span>
+            <span
+              class="inline-flex items-center rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-100"
+              [title]="isUPI(o) ? 'UPI — verify payment before completing' : 'Cash on delivery'"
+            >
+              Pay: {{ paymentLabel(o) }}
+            </span>
+            </div>
           </div>
 
           <div
-            class="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between"
+            class="mt-3 flex flex-col gap-3 border-t border-slate-100 pt-3 dark:border-slate-800"
           >
-            <div>
-              <p class="text-[10px] text-slate-500">Phone</p>
-              <p class="text-sm font-medium text-slate-900 dark:text-white">{{ o.phone }}</p>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <p class="text-[10px] text-slate-500">Phone</p>
+                <p class="text-sm font-medium text-slate-900 dark:text-white">{{ o.phone }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-500">Payment</p>
+                <p class="text-sm font-medium text-slate-900 dark:text-white">
+                  {{ paymentLabel(o) }}
+                  @if (isUPI(o)) {
+                    <span
+                      class="ml-1.5 inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                      [ngClass]="{
+                        'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100':
+                          o.paymentStatus === 'pending',
+                        'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100':
+                          o.paymentStatus === 'verified',
+                      }"
+                    >
+                      {{ o.paymentStatus === "verified" ? "Paid" : "Pending verify" }}
+                    </span>
+                  } @else {
+                    <span
+                      class="ml-1.5 inline-flex rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      COD
+                    </span>
+                  }
+                </p>
+              </div>
             </div>
-            <div class="sm:text-right">
-              <p class="text-[10px] text-slate-500">Payment</p>
-              <p class="text-sm font-medium text-slate-900 dark:text-white">
-                {{ o.paymentMethod === "upi" ? "UPI" : "Cash on delivery" }}
-                @if (o.paymentMethod === "upi") {
-                  <span
-                    class="ml-1.5 inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                    [ngClass]="{
-                      'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100':
-                        o.paymentStatus === 'pending',
-                      'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100':
-                        o.paymentStatus === 'verified',
-                    }"
-                  >
-                    {{ o.paymentStatus === "verified" ? "Paid" : "Pending verify" }}
-                  </span>
-                }
-              </p>
-            </div>
-            <div class="flex flex-wrap gap-1.5 sm:shrink-0">
+            <div class="flex flex-wrap gap-1.5">
               <a
                 [href]="'https://www.google.com/maps?q=' + o.location.lat + ',' + o.location.lng"
                 target="_blank"

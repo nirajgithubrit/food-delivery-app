@@ -51,7 +51,8 @@ export class OrdersComponent implements OnInit, OnDestroy {
         );
         if (index > -1) {
           const next = [...list];
-          next[index] = updatedOrder;
+          // Merge so realtime payloads never drop fields (e.g. paymentMethod) missing on partial updates.
+          next[index] = { ...list[index], ...updatedOrder };
           return next;
         }
         return [updatedOrder, ...list];
@@ -63,8 +64,8 @@ export class OrdersComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.api.getOrders().subscribe({
       next: (res: any) => {
-        const list = Array.isArray(res) ? res : [];
-        this.orders.set(list);
+        const raw = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        this.orders.set(raw);
         this.loading.set(false);
       },
       error: () => {
@@ -101,6 +102,16 @@ export class OrdersComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.socket.socket.off("new-order-admin");
     this.socket.socket.off("order-updated");
+  }
+
+  /** Normalized payment label for template (handles missing / odd casing from older orders). */
+  paymentLabel(order: { paymentMethod?: string } | null | undefined): string {
+    const raw = String(order?.paymentMethod ?? "cod").trim().toLowerCase();
+    return raw === "upi" ? "UPI" : "Cash on delivery";
+  }
+
+  isUPI(order: { paymentMethod?: string } | null | undefined): boolean {
+    return String(order?.paymentMethod ?? "cod").trim().toLowerCase() === "upi";
   }
 
   isDisabled(order: any, action: string): boolean {
