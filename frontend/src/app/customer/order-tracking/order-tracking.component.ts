@@ -128,6 +128,14 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
     return "Searching for rider…";
   });
 
+  /** Show handoff PIN once a rider is assigned (customer shares verbally at the door). */
+  readonly showHandoffPin = computed(() => {
+    const o = this.order();
+    if (!o?.deliveryPin || !o?.deliveryBoyId) return false;
+    if (o.status === "completed" || o.status === "rejected") return false;
+    return true;
+  });
+
   /** Rider phone for tel: link (empty string when unknown). */
   readonly riderPhone = computed(() => this.order()?.deliveryBoy?.phone || "");
 
@@ -171,6 +179,7 @@ export class OrderTrackingComponent implements OnInit, OnDestroy {
         deliveryBoy: data.deliveryBoy ?? prev?.deliveryBoy ?? null,
         restaurantName: data.restaurantName || prev?.restaurantName,
         restaurantPhone: data.restaurantPhone || prev?.restaurantPhone,
+        deliveryPin: data.deliveryPin ?? prev?.deliveryPin,
       });
 
       // Rider just got assigned (or changed) — refetch to pick up rider name/phone.

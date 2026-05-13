@@ -43,6 +43,8 @@ const OrderSchema = new mongoose.Schema({
   },
   rejectedBy: { type: [String], default: [] },
   phone: String,
+  /** Customer tells rider at door; never broadcast on sockets (see stripDeliveryPin). */
+  deliveryPin: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
 });
 

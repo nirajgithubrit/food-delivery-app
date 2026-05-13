@@ -93,7 +93,26 @@
               <p class="text-[10px] text-slate-500">Phone</p>
               <p class="text-sm font-medium text-slate-900 dark:text-white">{{ o.phone }}</p>
             </div>
-            <div class="flex flex-wrap gap-1.5">
+            <div class="sm:text-right">
+              <p class="text-[10px] text-slate-500">Payment</p>
+              <p class="text-sm font-medium text-slate-900 dark:text-white">
+                {{ o.paymentMethod === "upi" ? "UPI" : "Cash on delivery" }}
+                @if (o.paymentMethod === "upi") {
+                  <span
+                    class="ml-1.5 inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                    [ngClass]="{
+                      'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100':
+                        o.paymentStatus === 'pending',
+                      'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100':
+                        o.paymentStatus === 'verified',
+                    }"
+                  >
+                    {{ o.paymentStatus === "verified" ? "Paid" : "Pending verify" }}
+                  </span>
+                }
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-1.5 sm:shrink-0">
               <a
                 [href]="'https://www.google.com/maps?q=' + o.location.lat + ',' + o.location.lng"
                 target="_blank"

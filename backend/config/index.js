@@ -13,6 +13,8 @@ function parseOrigins(raw) {
     .filter(Boolean);
 }
 
+const allowedOrigins = parseOrigins(process.env.ALLOWED_ORIGINS);
+
 const nodeEnv = process.env.NODE_ENV || "development";
 
 const jwtAccessExpiresIn = process.env.JWT_ACCESS_EXPIRES_IN || "15m";
@@ -35,7 +37,9 @@ module.exports = {
   jwtAccessExpiresIn,
   jwtRefreshExpiresIn,
   jwtAccessMaxAgeMs: accessMaxAgeMsFromEnv(),
-  allowedOrigins: parseOrigins(process.env.ALLOWED_ORIGINS),
+  allowedOrigins,
+  /** Absolute site URL for FCM `click_url` / Web Push links (no trailing slash). */
+  publicWebOrigin: (process.env.PUBLIC_WEB_ORIGIN || "").trim().replace(/\/+$/, "") || allowedOrigins[0] || "",
   cookieSecure: process.env.COOKIE_SECURE === "true" || nodeEnv === "production",
   socketAuthOptional: process.env.SOCKET_AUTH_OPTIONAL === "true" || nodeEnv === "development",
   /**

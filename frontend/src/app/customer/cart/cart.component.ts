@@ -70,6 +70,20 @@ export class CartComponent {
       return;
     }
 
+    const phone = (
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("user") || ""
+        : ""
+    )
+      .trim()
+      .replace(/\s+/g, "");
+    if (phone.length < 10) {
+      this.toast.error(
+        "Your account needs a valid phone number. Sign in again with your mobile number.",
+      );
+      return;
+    }
+
     this.placingOrder.set(true);
 
     navigator.geolocation.getCurrentPosition(
@@ -81,7 +95,7 @@ export class CartComponent {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
           },
-          phone: "8155012096",
+          phone,
           paymentMethod: this.paymentMethod(),
         };
 

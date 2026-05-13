@@ -15,6 +15,15 @@ export interface AppEnvironment {
   readonly apiUrl: string;
   readonly socketUrl: string;
   readonly googleMapsApiKey: string;
+  /** Public origin of the deployed PWA (no trailing slash) — used for deep links in SW / docs. */
+  readonly webPushSiteUrl?: string;
+  /** Extra FCM / permission logs in the browser console. */
+  readonly fcmDebug?: boolean;
+  /**
+   * When true (default if omitted in prod logic), FCM auto-init on iOS runs only in standalone (installed PWA).
+   * Set `false` in local `environment.ts` to test in iOS Safari tabs.
+   */
+  readonly iosPushRequiresStandalone?: boolean;
   readonly firebase: AppFirebaseConfig;
   readonly firebaseAppCheck?: FirebaseAppCheckConfig;
 }

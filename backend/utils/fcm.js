@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const config = require("../config");
 const logger = require("./logger");
 const { tryGetMessaging } = require("./firebaseAdmin");
 
@@ -53,6 +54,10 @@ async function sendToTokens(tokens, notification, data = {}) {
 
   const flatData = stringifyData(data);
   const chunkSize = 500;
+  const origin = String(config.publicWebOrigin || "").replace(/\/+$/, "");
+  const iconAbs = origin ? `${origin}/icons/icon-192x192.png` : undefined;
+  const badgeAbs = origin ? `${origin}/icons/icon-72x72.png` : undefined;
+  const webLink = flatData.click_url || undefined;
 
   for (let i = 0; i < list.length; i += chunkSize) {
     const chunk = list.slice(i, i + chunkSize);
@@ -64,12 +69,28 @@ async function sendToTokens(tokens, notification, data = {}) {
           body: String(notification?.body || ""),
         },
         data: flatData,
-        android: { priority: "high" },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            channelId: "orders",
+            defaultSound: true,
+            defaultVibrateTimings: true,
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+            },
+          },
+        },
         webpush: {
           headers: { Urgency: "high" },
+          fcmOptions: webLink ? { link: webLink } : undefined,
           notification: {
-            icon: "/icons/icon-192x192.png",
-            badge: "/icons/icon-72x72.png",
+            icon: iconAbs || "/icons/icon-192x192.png",
+            badge: badgeAbs || "/icons/icon-72x72.png",
           },
         },
       });

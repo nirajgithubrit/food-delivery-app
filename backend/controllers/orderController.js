@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const Order = require("../models/order");
 const User = require("../models/user");
 const ApiResponse = require("../utils/apiResponse");
@@ -5,7 +6,12 @@ const AppError = require("../utils/AppError");
 const asyncHandler = require("../middleware/asyncHandler");
 const { assertStatusTransition } = require("../utils/orderTransitions");
 const { getPrimaryRestaurantSnapshot } = require("../utils/restaurantResolve");
-const { notifyUsersByRole, notifyUserById } = require("../utils/fcm");
+const { stripDeliveryPin } = require("../utils/orderPublic");
+const { notifyUsersByRole, notifyUserById } = require("../services/pushNotification.service");
+
+function makeDeliveryPin() {
+  return String(crypto.randomInt(100000, 1_000_000));
+}
 
 exports.placeOrder = asyncHandler(async (req, res) => {
   const {
@@ -42,6 +48,7 @@ exports.placeOrder = asyncHandler(async (req, res) => {
     pickupStatus: "pending",
     deliveryBoyId: null,
     rejectedBy: [],
+    deliveryPin: makeDeliveryPin(),
     restaurantLocation: {
       lat: rest.lat,
       lng: rest.lng,
@@ -51,27 +58,28 @@ exports.placeOrder = asyncHandler(async (req, res) => {
   });
 
   const io = req.app.get("io");
-  io.emit("new-order-admin", order);
-  io.emit("new-order", order);
+  const safeNew = stripDeliveryPin(order);
+  io.emit("new-order-admin", safeNew);
+  io.emit("new-order", safeNew);
 
   const short = String(order._id).slice(-6);
   const amount = order.totalAmount;
   void notifyUsersByRole(
     "admin",
     { title: "New order", body: `Order ${short} · ₹${amount}` },
-    { type: "new_order", orderId: String(order._id) },
+    { type: "new_order", orderId: String(order._id), click_path: "/admin/orders" },
   );
   void notifyUsersByRole(
     "delivery",
     { title: "New order", body: `Pool order ${short} · ₹${amount}` },
-    { type: "new_order_pool", orderId: String(order._id) },
+    { type: "new_order_pool", orderId: String(order._id), click_path: "/delivery/dashboard" },
   );
 
-  ApiResponse.success(res, order, 201);
+  ApiResponse.success(res, stripDeliveryPin(order), 201);
 });
 
 exports.getAllOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find().sort({ createdAt: -1 }).lean();
+  const orders = await Order.find().sort({ createdAt: -1 }).select("-deliveryPin").lean();
   ApiResponse.success(res, orders);
 });
 
@@ -103,12 +111,16 @@ exports.getCustomerOrders = asyncHandler(async (req, res) => {
     }, {});
   }
 
-  const enriched = orders.map((o) => ({
-    ...o,
-    deliveryBoy: o.deliveryBoyId ? ridersById[String(o.deliveryBoyId)] || null : null,
-    restaurantName: o.restaurantName || restFallback.name,
-    restaurantPhone: o.restaurantPhone || restFallback.phone,
-  }));
+  const enriched = orders.map((o) => {
+    const { deliveryPin, ...rest } = o;
+    return {
+      ...rest,
+      deliveryBoy: o.deliveryBoyId ? ridersById[String(o.deliveryBoyId)] || null : null,
+      restaurantName: o.restaurantName || restFallback.name,
+      restaurantPhone: o.restaurantPhone || restFallback.phone,
+      ...(o.deliveryBoyId && deliveryPin ? { deliveryPin } : {}),
+    };
+  });
 
   ApiResponse.success(res, enriched);
 });
@@ -128,7 +140,10 @@ exports.getDeliveryOrders = asyncHandler(async (req, res) => {
         rejectedBy: { $nin: [riderId] },
       },
     ],
-  }).sort({ createdAt: -1 });
+  })
+    .sort({ createdAt: -1 })
+    .select("-deliveryPin")
+    .lean();
 
   req.log?.debug?.({
     msg: "delivery orders fetched",
@@ -151,7 +166,7 @@ exports.updateRiderLocation = asyncHandler(async (req, res) => {
 });
 
 exports.updateOrder = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const { status, deliveryPin } = req.body;
   const order = await Order.findById(req.params.id);
   if (!order) throw new AppError("Order not found", 404);
 
@@ -165,6 +180,20 @@ exports.updateOrder = asyncHandler(async (req, res) => {
     if (order.paymentMethod === "upi" && order.paymentStatus !== "verified") {
       throw new AppError("UPI payment must be verified before completion", 400);
     }
+    if (req.user?.role === "delivery") {
+    if (order.deliveryPin) {
+      const pin = String(deliveryPin ?? "").trim();
+      if (!pin) {
+        throw new AppError("Enter the customer delivery PIN", 400);
+      }
+      if (!/^\d{4,6}$/.test(pin)) {
+        throw new AppError("Delivery PIN must be 4–6 digits", 400);
+      }
+      if (pin !== order.deliveryPin) {
+        throw new AppError("Delivery PIN does not match", 400);
+      }
+    }
+    }
   }
 
   order.status = status;
@@ -177,11 +206,12 @@ exports.updateOrder = asyncHandler(async (req, res) => {
 
   const io = req.app.get("io");
   const idStr = order._id.toString();
-  io.to(idStr).emit("order-updated", order);
-  io.emit("order-updated", order);
+  const safeOrder = stripDeliveryPin(order);
+  io.to(idStr).emit("order-updated", safeOrder);
+  io.emit("order-updated", safeOrder);
   // Re-announce confirmed unassigned orders to rider pools for reliability
   if (status === "confirmed" && !order.deliveryBoyId) {
-    io.emit("new-order", order);
+    io.emit("new-order", safeOrder);
   }
   // Keep delivery/customer UIs in sync when pool orders disappear (same as assign flow)
   if (status === "rejected") {
@@ -193,29 +223,29 @@ exports.updateOrder = asyncHandler(async (req, res) => {
     void notifyUserById(
       order.userId,
       { title: "Order confirmed", body: `Order #${shortId} was accepted` },
-      { type: "order_confirmed", orderId: idStr },
+      { type: "order_confirmed", orderId: idStr, click_path: "/customer/track" },
     );
   } else if (status === "inprogress") {
     void notifyUserById(
       order.userId,
       { title: "Out for delivery", body: `Order #${shortId} is on the way` },
-      { type: "order_inprogress", orderId: idStr },
+      { type: "order_inprogress", orderId: idStr, click_path: "/customer/track" },
     );
   } else if (status === "completed") {
     void notifyUserById(
       order.userId,
       { title: "Delivered", body: `Order #${shortId} completed` },
-      { type: "order_completed", orderId: idStr },
+      { type: "order_completed", orderId: idStr, click_path: "/customer/track" },
     );
   } else if (status === "rejected") {
     void notifyUserById(
       order.userId,
       { title: "Order update", body: `Order #${shortId} was not accepted` },
-      { type: "order_rejected", orderId: idStr },
+      { type: "order_rejected", orderId: idStr, click_path: "/customer/track" },
     );
   }
 
-  ApiResponse.success(res, order);
+  ApiResponse.success(res, stripDeliveryPin(order));
 });
 
 exports.markPickup = asyncHandler(async (req, res) => {
@@ -232,16 +262,17 @@ exports.markPickup = asyncHandler(async (req, res) => {
   await order.save();
 
   const io = req.app.get("io");
-  io.to(order._id.toString()).emit("order-updated", order);
-  io.emit("order-updated", order);
+  const safeOrder = stripDeliveryPin(order);
+  io.to(order._id.toString()).emit("order-updated", safeOrder);
+  io.emit("order-updated", safeOrder);
 
   void notifyUserById(
     order.userId,
     { title: "Order picked up", body: `Rider picked up order #${order._id.toString().slice(-6)}` },
-    { type: "order_picked_up", orderId: order._id.toString() },
+    { type: "order_picked_up", orderId: order._id.toString(), click_path: "/customer/track" },
   );
 
-  ApiResponse.success(res, order);
+  ApiResponse.success(res, safeOrder);
 });
 
 exports.assignDelivery = asyncHandler(async (req, res) => {
@@ -303,22 +334,23 @@ exports.assignDelivery = asyncHandler(async (req, res) => {
 
     const io = req.app.get("io");
     io.emit("order-removed", updated._id.toString());
-    io.emit("order-updated", updated);
+    const safeUpdated = stripDeliveryPin(updated);
+    io.emit("order-updated", safeUpdated);
 
     const oid = String(updated._id);
     const tail = oid.slice(-6);
     void notifyUserById(
       updated.userId,
       { title: "Rider assigned", body: `A partner is on the way for #${tail}` },
-      { type: "delivery_assigned", orderId: oid },
+      { type: "delivery_assigned", orderId: oid, click_path: "/customer/track" },
     );
     void notifyUserById(
       riderId,
       { title: "New delivery", body: `You have order #${tail}` },
-      { type: "delivery_assigned_rider", orderId: oid },
+      { type: "delivery_assigned_rider", orderId: oid, click_path: "/delivery/dashboard" },
     );
 
-    ApiResponse.success(res, updated);
+    ApiResponse.success(res, safeUpdated);
   } catch (err) {
     if (err instanceof AppError) throw err;
     console.error("[assignDelivery] error:", err?.message || err, err?.stack);
@@ -359,7 +391,8 @@ exports.verifyPayment = asyncHandler(async (req, res) => {
   await order.save();
 
   const io = req.app.get("io");
-  io.to(order._id.toString()).emit("order-updated", order);
-  io.emit("order-updated", order);
-  ApiResponse.success(res, order);
+  const safeOrder = stripDeliveryPin(order);
+  io.to(order._id.toString()).emit("order-updated", safeOrder);
+  io.emit("order-updated", safeOrder);
+  ApiResponse.success(res, safeOrder);
 });

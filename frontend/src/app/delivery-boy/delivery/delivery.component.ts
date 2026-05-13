@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angula
 import { SocketService } from '../../services/socket.service';
 import { ApiService } from '../../services/api.service';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { GoogleMapsModule } from '@angular/google-maps';
 import { ToastService } from '../../shared/services/toast.service';
 import { LogoutButtonComponent } from '../../shared/ui/logout-button/logout-button.component';
@@ -10,7 +11,7 @@ import { directionsOverviewToPath, isIosStandaloneWebApp } from '../../shared/ut
 @Component({
   selector: 'app-delivery',
   standalone: true,
-  imports: [CommonModule, GoogleMapsModule, LogoutButtonComponent],
+  imports: [CommonModule, FormsModule, GoogleMapsModule, LogoutButtonComponent],
   templateUrl: './delivery.component.html',
   styleUrl: './delivery.component.scss'
 })
@@ -47,6 +48,9 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   readonly riderName: string = (typeof localStorage !== 'undefined'
     ? localStorage.getItem('deliveryName') || ''
     : '').trim();
+
+  /** Customer PIN — rider asks customer, then enters here before completing. */
+  handoffPin = '';
 
   /** Total visible jobs across all panels — used in header summary chip. */
   get activeCount(): number {
@@ -457,8 +461,21 @@ export class DeliveryComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.api.updateOrder(this.orderId, 'completed').subscribe({
-      next: () => this.finishOrder(this.orderId!),
+    const raw = (this.handoffPin || "").trim().replace(/\D/g, "");
+    if (raw.length > 0 && (raw.length < 4 || raw.length > 6)) {
+      this.toast.error("PIN must be 4–6 digits.");
+      return;
+    }
+    const payload =
+      raw.length >= 4
+        ? ({ status: "completed" as const, deliveryPin: raw })
+        : ({ status: "completed" as const });
+
+    this.api.updateOrder(this.orderId, payload).subscribe({
+      next: () => {
+        this.handoffPin = "";
+        this.finishOrder(this.orderId!);
+      },
       error: (err) => {
         const msg = err.error?.error?.message ?? err.message ?? 'Could not complete order';
         this.toast.error(msg);
@@ -470,6 +487,7 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   finishOrder(orderId: string) {
 
     this.isArrived = false
+    this.handoffPin = '';
     this.stopTracking();
 
     this.ordersQueue = this.ordersQueue.filter(o => String(o._id) !== String(orderId));

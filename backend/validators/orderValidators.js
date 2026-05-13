@@ -5,7 +5,11 @@ const placeOrderRules = [
   body("totalAmount").isNumeric().withMessage("totalAmount must be a number"),
   body("location.lat").isFloat().withMessage("location.lat required"),
   body("location.lng").isFloat().withMessage("location.lng required"),
-  body("phone").optional().isString().isLength({ min: 6 }).withMessage("phone invalid"),
+  body("phone")
+    .isString()
+    .trim()
+    .isLength({ min: 10, max: 20 })
+    .withMessage("phone must be at least 10 characters"),
   body("paymentMethod")
     .optional()
     .isIn(["cod", "upi"])
