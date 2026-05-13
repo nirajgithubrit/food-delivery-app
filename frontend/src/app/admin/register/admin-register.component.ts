@@ -9,6 +9,8 @@ import { FormsModule } from "@angular/forms";
 import { Router, RouterLink } from "@angular/router";
 import { GoogleMapsModule } from "@angular/google-maps";
 import { ApiService } from "../../services/api.service";
+import { AuthService } from "../../services/auth.service";
+import { SocketService } from "../../services/socket.service";
 import { ToastService } from "../../shared/services/toast.service";
 import { NotificationService } from "../../shared/services/notification.service";
 
@@ -21,6 +23,8 @@ import { NotificationService } from "../../shared/services/notification.service"
 })
 export class AdminRegisterComponent {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
+  private readonly socket = inject(SocketService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly notifications = inject(NotificationService);
@@ -106,7 +110,10 @@ export class AdminRegisterComponent {
     this.submitting.set(true);
     this.api.registerAdmin(fd).subscribe({
       next: (res: { token?: string }) => {
-        if (res?.token) sessionStorage.setItem("authToken", res.token);
+        if (res?.token) {
+          this.auth.setLegacySession(res.token);
+        }
+        this.socket.reconnect();
         void this.notifications.initForLoggedInUser();
         this.toast.success("Restaurant account created");
         void this.router.navigate(["/admin/orders"]);

@@ -53,9 +53,8 @@ export class AppComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     if (this.auth.isLoggedIn()) {
       void this.notifications.initForLoggedInUser();
-      // Android PWA: after swipe-away, SW/token attach can lag — retry FCM registration.
-      window.setTimeout(() => void this.notifications.initForLoggedInUser(), 2_000);
-      window.setTimeout(() => void this.notifications.initForLoggedInUser(), 6_000);
+      // Single delayed retry — MessagingService dedupes concurrent inits; avoids triple FCM work on iOS PWA.
+      window.setTimeout(() => void this.notifications.initForLoggedInUser(), 3_000);
     }
   }
 

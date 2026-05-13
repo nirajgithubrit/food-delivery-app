@@ -66,7 +66,8 @@ messaging.onBackgroundMessage((payload) => {
     icon,
     badge,
     tag: String(tag),
-    renotify: true,
+    // renotify:true can surface duplicate banners on iOS Web Push for the same logical event.
+    renotify: false,
     data: { ...flat, click_url: clickUrl },
     vibrate: [120, 60, 120],
     requireInteraction: false,

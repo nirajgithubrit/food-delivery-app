@@ -6,7 +6,7 @@
  * 2) Google Cloud: Browser API key must allow Firebase Installations API + correct HTTP referrer restrictions.
  * 3) Firebase Console → Cloud Messaging: configure Apple APNs auth key for Safari / iOS web push delivery.
  * 4) Deploy `firebase-messaging-sw.js` at site root (Angular `public/`). `environment.webPushSiteUrl` = production origin (used for notification click URLs).
- * 5) iOS 16.4+: install PWA from Safari (Add to Home Screen); push auto-init skips in Safari tab when `iosPushRequiresStandalone` is true (default in prod).
+ * 5) iOS 16.4+: install PWA from Safari (Add to Home Screen); push auto-init skips in Safari tab when `iosPushRequiresStandalone` is true (default in prod). Desktop browsers may register FCM in a normal tab; Android/iOS in-tab still expect the installed PWA unless `pushNotificationsAllowInBrowserTab` is set.
  * 6) Local dev: set `pushNotificationsAllowInBrowserTab: true` in `environment.ts` so FCM can register
  *    at http://127.0.0.1:4200 without installing the PWA. Grant notification permission; use “Enable
  *    notifications” if shown. Foreground pushes show as in-app toasts (`onMessage`). Background pushes
@@ -81,6 +81,11 @@ export class MessagingService {
   private lastRegisteredToken: string | null = null;
   private warnedMissingVapid = false;
   private lastVisibilityResyncMs = 0;
+  /** Serializes FCM registration so overlapping init calls do not race (iOS PWA / focus churn). */
+  private fcmRegisterChain: Promise<void> = Promise.resolve();
+  /** Dedupe identical foreground payloads (duplicate push delivery / double handlers). */
+  private lastForegroundFingerprint = "";
+  private lastForegroundAt = 0;
 
   /** Last known browser permission (updated on init / explicit request). */
   readonly permissionState = signal<NotificationPermission | "unsupported">(
@@ -99,7 +104,7 @@ export class MessagingService {
         this.refreshPermissionSignal();
         const resync = () => {
           const now = Date.now();
-          if (now - this.lastVisibilityResyncMs < 8_000) return;
+          if (now - this.lastVisibilityResyncMs < 15_000) return;
           this.lastVisibilityResyncMs = now;
           void this.initForLoggedInUser();
         };
@@ -156,11 +161,17 @@ export class MessagingService {
     this.permissionState.set(Notification.permission);
   }
 
-  /** Installed PWA, or explicit dev flag to allow a normal tab (localhost testing). */
+  /**
+   * Installed PWA; localhost tab testing flag; or desktop browsers (Chrome/Edge/Firefox/Safari on
+   * macOS/Windows/Linux) where FCM Web Push works in a normal tab. Mobile Safari/Android in-tab
+   * stay off unless standalone or `pushNotificationsAllowInBrowserTab` — keeps iOS/Android PWA-first UX.
+   */
   private canUseWebPushInThisContext(): boolean {
     if (!isPlatformBrowser(this.platformId)) return false;
     if (isStandaloneDisplayMode()) return true;
-    return environment.pushNotificationsAllowInBrowserTab === true;
+    if (environment.pushNotificationsAllowInBrowserTab === true) return true;
+    if (!isIosLikeDevice() && !isAndroidDevice()) return true;
+    return false;
   }
 
   /**
@@ -188,7 +199,10 @@ export class MessagingService {
       return;
     }
 
-    await this.registerServiceWorkerAndToken({ requestPermission: false });
+    this.fcmRegisterChain = this.fcmRegisterChain.then(() =>
+      this.registerServiceWorkerAndToken({ requestPermission: false }),
+    );
+    await this.fcmRegisterChain;
   }
 
   /** User tapped “Enable notifications” — safe prompt + token + backend. */
@@ -203,7 +217,10 @@ export class MessagingService {
       return;
     }
 
-    await this.registerServiceWorkerAndToken({ requestPermission: true });
+    this.fcmRegisterChain = this.fcmRegisterChain.then(() =>
+      this.registerServiceWorkerAndToken({ requestPermission: true }),
+    );
+    await this.fcmRegisterChain;
   }
 
   async unregisterFromBackend(): Promise<void> {
@@ -226,6 +243,16 @@ export class MessagingService {
   private async registerServiceWorkerAndToken(opts: {
     requestPermission: boolean;
   }): Promise<void> {
+    if (
+      !opts.requestPermission &&
+      this.fcmReady() &&
+      this.lastRegisteredToken &&
+      this.lastRegisteredToken === this.readStoredToken()
+    ) {
+      this.log("register skip: FCM already active for current token");
+      return;
+    }
+
     const vapidKey = environment.firebase.vapidKey?.trim();
     if (!vapidKey) {
       if (!this.warnedMissingVapid) {
@@ -398,8 +425,35 @@ export class MessagingService {
     this.foregroundListenerAttached = true;
     onMessage(msgInstance, (payload) => {
       this.log("foreground message", payload);
-      const title = payload.notification?.title ?? "Update";
-      const body = payload.notification?.body ?? "";
+      const data = payload.data && typeof payload.data === "object" ? payload.data : {};
+      const title =
+        payload.notification?.title ??
+        (typeof data["title"] === "string" ? data["title"] : undefined) ??
+        "Update";
+      const body =
+        payload.notification?.body ??
+        (typeof data["body"] === "string" ? data["body"] : undefined) ??
+        "";
+      const messageId = typeof payload.messageId === "string" ? payload.messageId : "";
+      const fingerprint =
+        messageId ||
+        [
+          typeof data["type"] === "string" ? data["type"] : "",
+          typeof data["orderId"] === "string" ? data["orderId"] : "",
+          title,
+          body,
+        ].join("|");
+      const now = Date.now();
+      if (
+        fingerprint &&
+        fingerprint === this.lastForegroundFingerprint &&
+        now - this.lastForegroundAt < 6_000
+      ) {
+        this.log("foreground dedupe skip", fingerprint.slice(0, 80));
+        return;
+      }
+      this.lastForegroundFingerprint = fingerprint;
+      this.lastForegroundAt = now;
       const text = body ? `${title}: ${body}` : title;
       this.toast.success(text);
     });

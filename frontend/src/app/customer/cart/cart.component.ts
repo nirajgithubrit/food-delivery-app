@@ -109,6 +109,7 @@ export class CartComponent {
               const order = res as CustomerOrder;
               localStorage.setItem("orderId", order._id);
               this.cart.clear();
+              this.ordersStore.selectedTrackingOrder.set(null);
               if (order?._id) {
                 this.ordersStore.activeOrders.update((list) => {
                   const id = String(order._id);
@@ -117,7 +118,9 @@ export class CartComponent {
                 });
               }
               this.toast.success("Order placed! Track it live.");
-              this.router.navigate(["/orders", order._id]);
+              void this.router.navigate(["/orders", order._id], {
+                replaceUrl: true,
+              });
             },
             error: (err) => {
               const msg =

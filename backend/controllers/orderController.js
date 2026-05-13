@@ -302,7 +302,8 @@ exports.updateOrder = asyncHandler(async (req, res) => {
       { title: "Order accepted", body: `Order #${shortId} was accepted` },
       { type: "order_accepted", orderId: idStr, click_path: `/orders/${idStr}` },
     );
-  } else if (["out_for_delivery", "picked_up"].includes(status)) {
+  } else if (status === "out_for_delivery") {
+    // Notify only on out_for_delivery (not picked_up) so picked_up → out_for_delivery does not send two identical pushes.
     void notifyUserById(
       order.userId,
       { title: "Out for delivery", body: `Order #${shortId} is on the way` },

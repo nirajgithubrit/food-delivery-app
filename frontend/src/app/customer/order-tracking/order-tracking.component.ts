@@ -14,7 +14,7 @@ import { SocketService } from "../../services/socket.service";
 import { NotificationSoundService } from "../../shared/services/notification-sound.service";
 import { ToastService } from "../../shared/services/toast.service";
 import { CommonModule } from "@angular/common";
-import { ActivatedRoute, RouterLink } from "@angular/router";
+import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { GoogleMapsModule } from "@angular/google-maps";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
@@ -43,6 +43,7 @@ export class OrderTrackingComponent {
   private readonly toast = inject(ToastService);
   private readonly notifySound = inject(NotificationSoundService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly ordersStore = inject(CustomerOrdersStore);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -121,6 +122,14 @@ export class OrderTrackingComponent {
     } catch {
       /* no-op */
     }
+  }
+
+  /** Avoid routerLink + double navigation delay; clears saved order id before route change. */
+  goToMenu(ev: Event): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.clearSavedOrder();
+    void this.router.navigateByUrl("/customer/menu", { replaceUrl: true });
   }
 
   readonly riderName = computed(() => {
@@ -204,7 +213,14 @@ export class OrderTrackingComponent {
     { allowSignalWrites: true },
   );
 
+  /** True when the customer has two or more active orders — show back to the list. */
+  readonly showMultiOrderBack = computed(
+    () => this.ordersStore.activeOrders().length >= 2,
+  );
+
   constructor() {
+    this.ordersStore.loadActiveOrders();
+
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const orderId = params.get("orderId");
       if (!orderId) return;
