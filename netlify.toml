@@ -1,7 +1,15 @@
+# Default: production bundle (environment.prod.ts via `ng build`).
+# Netlify branch context `dev`: hosted DEV bundle (environment.dev.ts).
+# If your Git branch is not named `dev`, either rename the section to match the branch
+# (e.g. [context.develop]) or set the build command in the Netlify UI for the DEV site only.
+
 [build]
   base = "frontend"
   command = "npm run build"
   publish = "dist/frontend/browser"
+
+[context.dev]
+  command = "npm run build:dev"
 
 # Let the Angular service worker discover new builds (avoid stale ngsw.json in CDNs / PWA cache).
 [[headers]]
