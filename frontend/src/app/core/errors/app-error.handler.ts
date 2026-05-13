@@ -18,6 +18,15 @@ export class AppErrorHandler implements ErrorHandler {
       return;
     }
 
+    // Chrome extensions often reject `runtime.sendMessage` promises on the page — not app bugs.
+    if (
+      message.includes("message channel closed") ||
+      message.includes("asynchronous response") ||
+      message.includes("Extension context invalidated")
+    ) {
+      return;
+    }
+
     this.toast.error(message);
   }
 }

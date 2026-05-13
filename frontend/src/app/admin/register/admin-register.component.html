@@ -1,0 +1,192 @@
+<div class="min-h-dvh bg-[#f6f4f1] pb-24 dark:bg-slate-950">
+  <header
+    class="border-b border-slate-200/80 bg-white/90 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90 sm:px-6"
+    aria-label="Create restaurant account"
+  >
+    <p class="app-text-eyebrow">
+      Onboarding
+    </p>
+    <p class="app-text-page-title-lg mt-1">
+      Create restaurant account
+    </p>
+    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+      One admin workspace per restaurant. You can edit details later in settings.
+    </p>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+    <form class="space-y-5" (ngSubmit)="submit()">
+      <section class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+        <p class="app-text-section-label">Admin login</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Username
+            <input
+              [(ngModel)]="username"
+              name="username"
+              required
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Email
+            <input
+              [(ngModel)]="email"
+              name="email"
+              type="email"
+              required
+              autocomplete="email"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Password
+            <input
+              [(ngModel)]="password"
+              name="password"
+              type="password"
+              required
+              autocomplete="new-password"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Confirm password
+            <input
+              [(ngModel)]="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              autocomplete="new-password"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+        <p class="app-text-section-label">Restaurant</p>
+        <div class="mt-4 grid gap-4">
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Restaurant name
+            <input
+              [(ngModel)]="restaurantName"
+              name="restaurantName"
+              required
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+              Contact number
+              <input
+                [(ngModel)]="restaurantContact"
+                name="restaurantContact"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+              Category
+              <input
+                [(ngModel)]="category"
+                name="category"
+                placeholder="e.g. North Indian"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              />
+            </label>
+          </div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Address
+            <textarea
+              [(ngModel)]="restaurantAddress"
+              name="restaurantAddress"
+              rows="2"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            ></textarea>
+          </label>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Description
+            <textarea
+              [(ngModel)]="description"
+              name="description"
+              rows="2"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            ></textarea>
+          </label>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Formatted address (optional)
+            <input
+              [(ngModel)]="formattedAddress"
+              name="formattedAddress"
+              placeholder="From Places / map"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+        <p class="app-text-section-label">Pin on map</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Tap the map to set the exact pickup location (latitude & longitude are saved).
+        </p>
+        <google-map
+          class="mt-3 block h-56 w-full overflow-hidden rounded-xl sm:h-72"
+          [center]="center()"
+          [zoom]="15"
+          [options]="mapOptions"
+          (mapClick)="onMapClick($event)"
+        >
+          <map-marker [position]="marker()" />
+        </google-map>
+        <p class="mt-2 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+          {{ marker().lat | number : "1.5-5" }}, {{ marker().lng | number : "1.5-5" }}
+        </p>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+        <p class="app-text-section-label">Branding (optional)</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Logo
+            <input
+              type="file"
+              accept="image/*"
+              (change)="onLogoPick($event)"
+              class="mt-1 w-full text-xs"
+            />
+          </label>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Banner
+            <input
+              type="file"
+              accept="image/*"
+              (change)="onBannerPick($event)"
+              class="mt-1 w-full text-xs"
+            />
+          </label>
+        </div>
+      </section>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:justify-between">
+        <a
+          routerLink="/admin/login"
+          class="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 no-underline dark:border-slate-700 dark:text-slate-200"
+        >
+          Back to sign in
+        </a>
+        <button
+          type="submit"
+          class="inline-flex min-h-[2.85rem] items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
+          [disabled]="submitting()"
+        >
+          @if (submitting()) {
+            <span>Creating…</span>
+          } @else {
+            <span>Create account</span>
+          }
+        </button>
+      </div>
+    </form>
+  </main>
+</div>

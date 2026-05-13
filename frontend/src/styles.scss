@@ -68,6 +68,36 @@
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950;
   }
 
+  /*
+   * Typography: avoid h1–h4 (UA margins / default sizes hurt mobile layouts).
+   * Pair with <header>/<main>/<section> landmarks and aria-label where useful.
+   */
+  .app-text-page-title {
+    @apply font-display font-bold tracking-tight leading-tight text-slate-900 dark:text-white;
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  .app-text-page-title-lg {
+    @apply font-display font-bold tracking-tight leading-tight text-slate-900 dark:text-white;
+    @apply text-xl sm:text-2xl md:text-3xl;
+  }
+
+  .app-text-section-label {
+    @apply text-sm font-bold leading-snug tracking-tight text-slate-900 dark:text-white;
+  }
+
+  .app-text-card-title {
+    @apply font-display text-base font-semibold leading-snug tracking-tight text-slate-900 dark:text-white;
+  }
+
+  .app-text-eyebrow {
+    @apply text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400;
+  }
+
+  .app-text-overline {
+    @apply text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400;
+  }
+
   /* Login only: theme toggle bottom-right on small screens (see app.component.html) */
   @media (max-width: 767px) {
     app-theme-toggle.login-theme-bottom-mobile {

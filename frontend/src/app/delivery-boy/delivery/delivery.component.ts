@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { GoogleMapsModule } from '@angular/google-maps';
 import { ToastService } from '../../shared/services/toast.service';
 import { LogoutButtonComponent } from '../../shared/ui/logout-button/logout-button.component';
+import { directionsOverviewToPath, isIosStandaloneWebApp } from '../../shared/utils/maps-route';
 
 @Component({
   selector: 'app-delivery',
@@ -29,13 +30,16 @@ export class DeliveryComponent implements OnInit, OnDestroy {
   center!: google.maps.LatLngLiteral;
   riderPosition!: google.maps.LatLngLiteral;
   directionsResults?: google.maps.DirectionsResult;
+  /** iOS home-screen PWA: polyline avoids DirectionsRenderer timing bugs. */
+  readonly usePolylineForRoute = isIosStandaloneWebApp();
+  routePolylinePath: google.maps.LatLngLiteral[] = [];
   zoom = 15;
 
   // 📡 TRACKING
   orderId: string | null = null;
   watchId: any;
   isTracking = false;
-  isArrived = false
+  isArrived = false;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private readonly reconnectHandler = () => this.loadAssignedOrders();
 
@@ -319,6 +323,16 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     }
   }
 
+  get routePolylineOptions(): google.maps.PolylineOptions {
+    return {
+      path: this.routePolylinePath,
+      strokeColor: "#2563eb",
+      strokeWeight: 4,
+      strokeOpacity: 1,
+      geodesic: true,
+    };
+  }
+
   // 🛣️ ROUTE
   updateRoute() {
 
@@ -329,9 +343,15 @@ export class DeliveryComponent implements OnInit, OnDestroy {
       destination: this.target,
       travelMode: google.maps.TravelMode.DRIVING
     }, (res, status) => {
-      if (status === 'OK') {
-        this.directionsResults = res!;
-      }
+      this.zone.run(() => {
+        if (status === "OK" && res) {
+          this.directionsResults = res;
+          this.routePolylinePath = directionsOverviewToPath(res);
+        } else {
+          this.routePolylinePath = [];
+        }
+        this.cdr.markForCheck();
+      });
     });
   }
 
