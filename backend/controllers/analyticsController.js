@@ -31,7 +31,7 @@ exports.getOverview = asyncHandler(async (req, res) => {
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]),
     Order.aggregate([
-      { $match: { ...baseMatch, status: "completed" } },
+      { $match: { ...baseMatch, status: "delivered" } },
       { $group: { _id: null, revenue: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
     ]),
     Order.aggregate([
@@ -41,7 +41,7 @@ exports.getOverview = asyncHandler(async (req, res) => {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
           orders: { $sum: 1 },
           revenue: {
-            $sum: { $cond: [{ $eq: ["$status", "completed"] }, "$totalAmount", 0] },
+            $sum: { $cond: [{ $eq: ["$status", "delivered"] }, "$totalAmount", 0] },
           },
         },
       },
@@ -85,8 +85,8 @@ exports.getOverview = asyncHandler(async (req, res) => {
     totals: {
       orders: totalOrders,
       revenue: revenueRow.revenue || 0,
-      completedOrders: revenueRow.count || 0,
-      activeDeliveries: (byStatus.inprogress || 0) + (byStatus.confirmed || 0),
+      deliveredOrders: revenueRow.count || 0,
+      activeDeliveries: (byStatus.out_for_delivery || 0) + (byStatus.picked_up || 0),
       rejected: byStatus.rejected || 0,
     },
     byStatus,

@@ -24,8 +24,10 @@ router.post(
 router.get("/", protect, authorize("admin"), orderController.getAllOrders);
 
 router.get("/me", protect, authorize("customer"), orderController.getCustomerOrders);
-
+router.get("/active", protect, authorize("customer"), orderController.getCustomerActiveOrders);
+router.get("/history", protect, authorize("customer"), orderController.getCustomerOrderHistory);
 router.get("/my", protect, authorize("delivery"), orderController.getDeliveryOrders);
+router.get("/:id", protect, authorize("customer"), orderIdParam, validateRequest, orderController.getCustomerOrderById);
 
 router.put(
   "/rider/location",

@@ -5,7 +5,9 @@ export const environment: AppEnvironment = {
   apiUrl: "http://localhost:3000/api",
   socketUrl: "http://localhost:3000",
   googleMapsApiKey: "AIzaSyCeE-s4yTloqvacHp6cBjnsbQL48vKtP4U",
-  webPushSiteUrl: "http://localhost:4200",
+  webPushSiteUrl: "http://127.0.0.1:4200",
+  /** Allow FCM on localhost in a normal tab (not only installed PWA). */
+  pushNotificationsAllowInBrowserTab: true,
   fcmDebug: true,
   iosPushRequiresStandalone: false,
   firebase: {

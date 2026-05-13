@@ -26,7 +26,17 @@ const assignRules = [
 const updateStatusRules = [
   param("id").isMongoId().withMessage("Invalid order id"),
   body("status")
-    .isIn(["pending", "confirmed", "inprogress", "completed", "rejected"])
+    .isIn([
+      "pending",
+      "accepted",
+      "preparing",
+      "ready_for_pickup",
+      "picked_up",
+      "out_for_delivery",
+      "delivered",
+      "cancelled",
+      "rejected",
+    ])
     .withMessage("Valid status is required"),
 ];
 

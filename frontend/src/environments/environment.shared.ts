@@ -24,6 +24,11 @@ export interface AppEnvironment {
    * Set `false` in local `environment.ts` to test in iOS Safari tabs.
    */
   readonly iosPushRequiresStandalone?: boolean;
+  /**
+   * When true, FCM may register in a normal browser tab (e.g. http://127.0.0.1:4200) for local testing.
+   * Omit or false in production so only installed PWAs register (recommended).
+   */
+  readonly pushNotificationsAllowInBrowserTab?: boolean;
   readonly firebase: AppFirebaseConfig;
   readonly firebaseAppCheck?: FirebaseAppCheckConfig;
 }

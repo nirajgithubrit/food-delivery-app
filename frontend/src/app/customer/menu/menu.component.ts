@@ -15,6 +15,7 @@ import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiSkeletonComponent } from "../../shared/ui/ui-skeleton/ui-skeleton.component";
 import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-state.component";
 import { LogoutButtonComponent } from "../../shared/ui/logout-button/logout-button.component";
+import { CustomerOrdersStore } from "../services/customer-orders.store";
 import { catchError, of } from "rxjs";
 
 @Component({
@@ -36,6 +37,7 @@ export class MenuComponent {
   private readonly api = inject(ApiService);
   private readonly cart = inject(CartService);
   private readonly toast = inject(ToastService);
+  private readonly ordersStore = inject(CustomerOrdersStore);
 
   readonly loading = signal(true);
   readonly items = signal<any[]>([]);
@@ -52,7 +54,9 @@ export class MenuComponent {
   readonly cartCount = computed(() =>
     this.cartItems().reduce((sum, i) => sum + (i.qty ?? 0), 0),
   );
-  readonly hasLiveOrder = signal(false);
+
+  /** True when the customer has at least one non-terminal order (same source as Active Orders). */
+  readonly hasLiveOrders = computed(() => this.ordersStore.hasActiveOrders());
 
   readonly filteredItems = computed(() => {
     const q = this.searchText().toLowerCase();
@@ -66,6 +70,8 @@ export class MenuComponent {
   });
 
   constructor() {
+    this.ordersStore.loadActiveOrders();
+
     this.api
       .getItems()
       .pipe(
@@ -92,19 +98,6 @@ export class MenuComponent {
         const list = Array.isArray(res) ? res : [];
         const dynamic = list.map((c: any) => String(c.slug || "").trim()).filter(Boolean);
         this.categories.set(["all", ...dynamic]);
-      });
-
-    this.api
-      .getCustomerOrders()
-      .pipe(
-        catchError(() => of([] as any[])),
-      )
-      .subscribe((orders: any[]) => {
-        const latest = orders?.[0];
-        const status = String(latest?.status ?? "").trim().toLowerCase();
-        this.hasLiveOrder.set(
-          status === "pending" || status === "confirmed" || status === "inprogress",
-        );
       });
   }
 

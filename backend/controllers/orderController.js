@@ -13,6 +13,25 @@ function makeDeliveryPin() {
   return String(crypto.randomInt(100000, 1_000_000));
 }
 
+function orderRoom(orderId) {
+  return `order_${String(orderId)}`;
+}
+
+const ACTIVE_STATUS = new Set([
+  "pending",
+  "accepted",
+  "preparing",
+  "ready_for_pickup",
+  "picked_up",
+  "out_for_delivery",
+]);
+
+const HISTORY_STATUS = new Set(["delivered", "cancelled", "rejected"]);
+
+function getCustomerFacingStatus(status) {
+  return String(status || "pending").toLowerCase();
+}
+
 exports.placeOrder = asyncHandler(async (req, res) => {
   const {
     items,
@@ -83,11 +102,7 @@ exports.getAllOrders = asyncHandler(async (req, res) => {
   ApiResponse.success(res, orders);
 });
 
-exports.getCustomerOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({ userId: String(req.user.id) })
-    .sort({ createdAt: -1 })
-    .lean();
-
+async function enrichCustomerOrders(orders) {
   const restFallback = await getPrimaryRestaurantSnapshot();
 
   // Collect distinct rider ids that are valid ObjectIds, then attach rider info.
@@ -111,19 +126,64 @@ exports.getCustomerOrders = asyncHandler(async (req, res) => {
     }, {});
   }
 
-  const enriched = orders.map((o) => {
+  return orders.map((o) => {
     const { deliveryPin, ...rest } = o;
     return {
       ...rest,
+      status: getCustomerFacingStatus(o.status),
       deliveryBoy: o.deliveryBoyId ? ridersById[String(o.deliveryBoyId)] || null : null,
       restaurantName: o.restaurantName || restFallback.name,
       restaurantPhone: o.restaurantPhone || restFallback.phone,
       ...(o.deliveryBoyId && deliveryPin ? { deliveryPin } : {}),
     };
   });
+}
 
+exports.getCustomerOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find({ userId: String(req.user.id) })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const enriched = await enrichCustomerOrders(orders);
   ApiResponse.success(res, enriched);
 });
+
+exports.getCustomerActiveOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find({ userId: String(req.user.id) })
+    .sort({ createdAt: -1 })
+    .lean();
+  const active = orders.filter((o) =>
+    ACTIVE_STATUS.has(getCustomerFacingStatus(o.status)),
+  );
+  ApiResponse.success(res, await enrichCustomerOrders(active));
+});
+
+exports.getCustomerOrderHistory = asyncHandler(async (req, res) => {
+  const orders = await Order.find({ userId: String(req.user.id) })
+    .sort({ createdAt: -1 })
+    .lean();
+  const history = orders.filter((o) =>
+    HISTORY_STATUS.has(getCustomerFacingStatus(o.status)),
+  );
+  ApiResponse.success(res, await enrichCustomerOrders(history));
+});
+
+exports.getCustomerOrderById = asyncHandler(async (req, res) => {
+  const order = await Order.findOne({
+    _id: req.params.id,
+    userId: String(req.user.id),
+  }).lean();
+  if (!order) throw new AppError("Order not found", 404);
+  const [enriched] = await enrichCustomerOrders([order]);
+  ApiResponse.success(res, enriched);
+});
+
+function hasDeliveryAssignee(order) {
+  const raw = order?.deliveryBoyId;
+  if (raw == null) return false;
+  const val = String(raw).trim().toLowerCase();
+  return val !== "" && val !== "null" && val !== "undefined";
+}
 
 exports.getDeliveryOrders = asyncHandler(async (req, res) => {
   const riderId = String(req.user.id);
@@ -132,11 +192,16 @@ exports.getDeliveryOrders = asyncHandler(async (req, res) => {
     $or: [
       {
         deliveryBoyId: riderId,
-        status: { $nin: ["completed", "rejected"] },
+        status: { $nin: ["delivered", "cancelled", "rejected"] },
       },
       {
-        deliveryBoyId: null,
-        status: { $in: ["pending", "confirmed"] },
+        $or: [
+          { deliveryBoyId: null },
+          { deliveryBoyId: "" },
+          { deliveryBoyId: { $exists: false } },
+        ],
+        /** Keep in rider pool until a rider accepts — not only pending/accepted. */
+        status: { $in: ["pending", "accepted", "preparing", "ready_for_pickup"] },
         rejectedBy: { $nin: [riderId] },
       },
     ],
@@ -172,11 +237,20 @@ exports.updateOrder = asyncHandler(async (req, res) => {
 
   assertStatusTransition(order.status, status);
 
-  if (status === "inprogress" && !order.deliveryBoyId) {
+  if (["preparing", "ready_for_pickup"].includes(status)) {
+    if (!hasDeliveryAssignee(order)) {
+      throw new AppError(
+        "A rider must accept this delivery (or be assigned) before the kitchen can move the order to this stage.",
+        400,
+      );
+    }
+  }
+
+  if (status === "out_for_delivery" && !hasDeliveryAssignee(order)) {
     throw new AppError("Assign rider before starting delivery", 400);
   }
 
-  if (status === "completed") {
+  if (status === "delivered") {
     if (order.paymentMethod === "upi" && order.paymentStatus !== "verified") {
       throw new AppError("UPI payment must be verified before completion", 400);
     }
@@ -197,20 +271,23 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   }
 
   order.status = status;
+  if (status === "picked_up" || status === "out_for_delivery" || status === "delivered") {
+    order.pickupStatus = "picked";
+  }
 
   await order.save();
 
-  if (order.status === "completed" && order.deliveryBoyId) {
+  if (order.status === "delivered" && order.deliveryBoyId) {
     await User.findByIdAndUpdate(order.deliveryBoyId, { isAvailable: true });
   }
 
   const io = req.app.get("io");
   const idStr = order._id.toString();
   const safeOrder = stripDeliveryPin(order);
-  io.to(idStr).emit("order-updated", safeOrder);
+  io.to(orderRoom(idStr)).emit("order-updated", safeOrder);
   io.emit("order-updated", safeOrder);
-  // Re-announce confirmed unassigned orders to rider pools for reliability
-  if (status === "confirmed" && !order.deliveryBoyId) {
+  // Re-announce accepted unassigned orders to rider pools for reliability
+  if (status === "accepted" && !order.deliveryBoyId) {
     io.emit("new-order", safeOrder);
   }
   // Keep delivery/customer UIs in sync when pool orders disappear (same as assign flow)
@@ -219,29 +296,29 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   }
 
   const shortId = idStr.slice(-6);
-  if (status === "confirmed") {
+  if (status === "accepted") {
     void notifyUserById(
       order.userId,
-      { title: "Order confirmed", body: `Order #${shortId} was accepted` },
-      { type: "order_confirmed", orderId: idStr, click_path: "/customer/track" },
+      { title: "Order accepted", body: `Order #${shortId} was accepted` },
+      { type: "order_accepted", orderId: idStr, click_path: `/orders/${idStr}` },
     );
-  } else if (status === "inprogress") {
+  } else if (["out_for_delivery", "picked_up"].includes(status)) {
     void notifyUserById(
       order.userId,
       { title: "Out for delivery", body: `Order #${shortId} is on the way` },
-      { type: "order_inprogress", orderId: idStr, click_path: "/customer/track" },
+      { type: "order_out_for_delivery", orderId: idStr, click_path: `/orders/${idStr}` },
     );
-  } else if (status === "completed") {
+  } else if (status === "delivered") {
     void notifyUserById(
       order.userId,
-      { title: "Delivered", body: `Order #${shortId} completed` },
-      { type: "order_completed", orderId: idStr, click_path: "/customer/track" },
+      { title: "Delivered", body: `Order #${shortId} delivered` },
+      { type: "order_delivered", orderId: idStr, click_path: `/orders/${idStr}` },
     );
   } else if (status === "rejected") {
     void notifyUserById(
       order.userId,
       { title: "Order update", body: `Order #${shortId} was not accepted` },
-      { type: "order_rejected", orderId: idStr, click_path: "/customer/track" },
+      { type: "order_rejected", orderId: idStr, click_path: `/orders/${idStr}` },
     );
   }
 
@@ -254,22 +331,28 @@ exports.markPickup = asyncHandler(async (req, res) => {
   if (String(order.deliveryBoyId) !== String(req.user.id)) {
     throw new AppError("Not assigned to this order", 403);
   }
-  if (!["confirmed", "inprogress"].includes(order.status)) {
+  if (!["ready_for_pickup"].includes(order.status)) {
     throw new AppError("Invalid order state for pickup", 400);
   }
 
+  assertStatusTransition(order.status, "out_for_delivery");
+
   order.pickupStatus = "picked";
+  /** Same lifecycle as admin “Dispatch” — customer map and ETA switch to rider → customer immediately. */
+  order.status = "out_for_delivery";
   await order.save();
 
   const io = req.app.get("io");
+  const idStr = order._id.toString();
+  const shortId = idStr.slice(-6);
   const safeOrder = stripDeliveryPin(order);
-  io.to(order._id.toString()).emit("order-updated", safeOrder);
+  io.to(orderRoom(idStr)).emit("order-updated", safeOrder);
   io.emit("order-updated", safeOrder);
 
   void notifyUserById(
     order.userId,
-    { title: "Order picked up", body: `Rider picked up order #${order._id.toString().slice(-6)}` },
-    { type: "order_picked_up", orderId: order._id.toString(), click_path: "/customer/track" },
+    { title: "Out for delivery", body: `Order #${shortId} is on the way` },
+    { type: "order_out_for_delivery", orderId: idStr, click_path: `/orders/${idStr}` },
   );
 
   ApiResponse.success(res, safeOrder);
@@ -303,12 +386,11 @@ exports.assignDelivery = asyncHandler(async (req, res) => {
   try {
     // Atomic assign without aggregation pipeline. Mongoose + runValidators on
     // pipeline updates often throws (surfacing as opaque 500s in production).
-    // Business rules: unassigned + pending|confirmed only; accepting always
-    // ensures restaurant-side "confirmed" (idempotent if already confirmed).
+    // Business rules: unassigned + pending|accepted only.
     const updated = await Order.findOneAndUpdate(
       {
         _id: id,
-        status: { $in: ["pending", "confirmed"] },
+        status: { $in: ["pending", "accepted"] },
         $or: [
           { deliveryBoyId: null },
           { deliveryBoyId: { $exists: false } },
@@ -318,7 +400,7 @@ exports.assignDelivery = asyncHandler(async (req, res) => {
       {
         $set: {
           deliveryBoyId: riderId,
-          status: "confirmed",
+          status: "accepted",
         },
       },
       { new: true },
@@ -342,7 +424,7 @@ exports.assignDelivery = asyncHandler(async (req, res) => {
     void notifyUserById(
       updated.userId,
       { title: "Rider assigned", body: `A partner is on the way for #${tail}` },
-      { type: "delivery_assigned", orderId: oid, click_path: "/customer/track" },
+      { type: "delivery_assigned", orderId: oid, click_path: `/orders/${oid}` },
     );
     void notifyUserById(
       riderId,
@@ -392,7 +474,7 @@ exports.verifyPayment = asyncHandler(async (req, res) => {
 
   const io = req.app.get("io");
   const safeOrder = stripDeliveryPin(order);
-  io.to(order._id.toString()).emit("order-updated", safeOrder);
+  io.to(orderRoom(order._id.toString())).emit("order-updated", safeOrder);
   io.emit("order-updated", safeOrder);
   ApiResponse.success(res, safeOrder);
 });

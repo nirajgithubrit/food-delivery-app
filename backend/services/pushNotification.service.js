@@ -14,7 +14,7 @@ function withClickThrough(data = {}) {
         : `/${String(out.click_path)}`;
       out.click_url = `${base}${p}`;
     } else if (out.orderId) {
-      out.click_url = `${base}/customer/track`;
+      out.click_url = `${base}/orders/${String(out.orderId)}`;
     } else {
       out.click_url = `${base}/`;
     }

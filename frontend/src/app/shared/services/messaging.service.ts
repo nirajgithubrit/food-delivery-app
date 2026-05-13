@@ -7,6 +7,10 @@
  * 3) Firebase Console → Cloud Messaging: configure Apple APNs auth key for Safari / iOS web push delivery.
  * 4) Deploy `firebase-messaging-sw.js` at site root (Angular `public/`). `environment.webPushSiteUrl` = production origin (used for notification click URLs).
  * 5) iOS 16.4+: install PWA from Safari (Add to Home Screen); push auto-init skips in Safari tab when `iosPushRequiresStandalone` is true (default in prod).
+ * 6) Local dev: set `pushNotificationsAllowInBrowserTab: true` in `environment.ts` so FCM can register
+ *    at http://127.0.0.1:4200 without installing the PWA. Grant notification permission; use “Enable
+ *    notifications” if shown. Foreground pushes show as in-app toasts (`onMessage`). Background pushes
+ *    require the tab to be in the background or use Firebase “Send test message” to the device token.
  */
 import { isPlatformBrowser } from "@angular/common";
 import {
@@ -131,6 +135,7 @@ export class MessagingService {
   /** Show “Enable notifications” when logged-in flow can still subscribe. */
   readonly shouldShowEnablePushButton = computed(() => {
     if (!isPlatformBrowser(this.platformId)) return false;
+    if (!this.canUseWebPushInThisContext()) return false;
     const p = this.permissionState();
     if (p === "denied" || p === "unsupported") return false;
     if (p === "granted" && (this.fcmReady() || this.readFcmRegisteredPersisted())) {
@@ -151,6 +156,13 @@ export class MessagingService {
     this.permissionState.set(Notification.permission);
   }
 
+  /** Installed PWA, or explicit dev flag to allow a normal tab (localhost testing). */
+  private canUseWebPushInThisContext(): boolean {
+    if (!isPlatformBrowser(this.platformId)) return false;
+    if (isStandaloneDisplayMode()) return true;
+    return environment.pushNotificationsAllowInBrowserTab === true;
+  }
+
   /**
    * Auto path after login / app load. Respects iOS “installed PWA only” when enabled.
    * Does not call `requestPermission()` unless already granted (avoids surprise prompts).
@@ -159,8 +171,10 @@ export class MessagingService {
     if (!isPlatformBrowser(this.platformId)) return;
     this.refreshPermissionSignal();
 
-    if (!isStandaloneDisplayMode()) {
-      this.log("init skip: FCM runs in installed PWA only (not a normal browser tab)");
+    if (!this.canUseWebPushInThisContext()) {
+      this.log(
+        "init skip: use installed PWA, or set environment.pushNotificationsAllowInBrowserTab for localhost",
+      );
       return;
     }
 
@@ -182,9 +196,9 @@ export class MessagingService {
     if (!isPlatformBrowser(this.platformId)) return;
     this.refreshPermissionSignal();
 
-    if (!isStandaloneDisplayMode()) {
+    if (!this.canUseWebPushInThisContext()) {
       this.toast.info(
-        "Install this site as an app (browser menu → Install app or Add to Home Screen), then open the app and enable notifications there.",
+        "Install this site as an app (browser menu → Install app or Add to Home Screen), then open the app and enable notifications there — or enable pushNotificationsAllowInBrowserTab in environment for localhost.",
       );
       return;
     }

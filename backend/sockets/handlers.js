@@ -30,7 +30,7 @@ function registerSocketHandlers(io) {
           return;
         }
 
-        socket.join(String(orderId));
+        socket.join(`order_${String(orderId)}`);
       } catch (e) {
         logger.error({ msg: "join-order error", err: e.message });
       }
@@ -70,7 +70,7 @@ function registerSocketHandlers(io) {
           { new: true },
         );
 
-        io.to(String(orderId)).emit("location-update", updated);
+        io.to(`order_${String(orderId)}`).emit("location-update", updated);
       } catch (e) {
         logger.error({ msg: "send-location error", err: e.message });
       }

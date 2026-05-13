@@ -14,6 +14,7 @@ import { CommonModule } from "@angular/common";
 import { Router, RouterLink } from "@angular/router";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-state.component";
+import { CustomerOrdersStore, CustomerOrder } from "../services/customer-orders.store";
 
 @Component({
   selector: "app-cart",
@@ -33,6 +34,7 @@ export class CartComponent {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly ordersStore = inject(CustomerOrdersStore);
 
   readonly cartItems = toSignal(this.cart.getItems(), {
     initialValue: [] as any[],
@@ -103,11 +105,19 @@ export class CartComponent {
           .placeOrder(orderData)
           .pipe(finalize(() => this.placingOrder.set(false)))
           .subscribe({
-            next: (res: any) => {
-              localStorage.setItem("orderId", res._id);
+            next: (res: unknown) => {
+              const order = res as CustomerOrder;
+              localStorage.setItem("orderId", order._id);
               this.cart.clear();
+              if (order?._id) {
+                this.ordersStore.activeOrders.update((list) => {
+                  const id = String(order._id);
+                  if (list.some((o) => String(o._id) === id)) return list;
+                  return [order, ...list];
+                });
+              }
               this.toast.success("Order placed! Track it live.");
-              this.router.navigate(["/customer/track"]);
+              this.router.navigate(["/orders", order._id]);
             },
             error: (err) => {
               const msg =
