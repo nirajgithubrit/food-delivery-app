@@ -168,10 +168,8 @@ export class DeliveryComponent implements OnInit, OnDestroy {
           this.ordersQueue.push(order);
         }
 
-      // start tracking only for MY order
-        if (status === 'inprogress') {
-          this.startOrder(order);
-        }
+        // Map + active job: newest dispatched in-progress order wins; after complete, promote next.
+        this.syncActiveDeliveryFromQueue();
         this.cdr.detectChanges();
       });
     });
@@ -234,18 +232,8 @@ export class DeliveryComponent implements OnInit, OnDestroy {
           return String(o.deliveryBoyId) === myId;
         });
 
-        // ✅ 3. START ACTIVE ORDER
-        const active = this.ordersQueue.find((o: any) => this.normalizeStatus(o?.status) === 'inprogress');
-        if (active) {
-          this.startOrder(active);
-        } else if (this.currentOrder) {
-          const stillActive = this.ordersQueue.some(
-            (o: any) => String(o._id) === String(this.currentOrder?._id)
-          );
-          if (!stillActive) {
-            this.finishOrder(String(this.currentOrder._id));
-          }
-        }
+        // ✅ 3. Active delivery = newest in-progress job (not first in list — avoids stale map when 2+ dispatched).
+        this.syncActiveDeliveryFromQueue();
 
         console.log(
           '[delivery] api list',
@@ -498,6 +486,72 @@ export class DeliveryComponent implements OnInit, OnDestroy {
 
     this.currentOrder = null;
     this.orderId = null;
+
+    // If another job is already in progress, switch map/details to it immediately.
+    this.syncActiveDeliveryFromQueue();
+  }
+
+  /**
+   * Among my in-progress orders, the **newest** (latest `createdAt`) is the active run.
+   * Fixes: second dispatch while first still shows — map stayed on older order because `.find()` picked first in API order.
+   */
+  private pickPrimaryInProgressOrder(queue: any[], myId: string | null): any | null {
+    if (!myId) return null;
+    const list = queue.filter(
+      (o) =>
+        String(o.deliveryBoyId) === myId &&
+        this.normalizeStatus(o?.status) === "inprogress",
+    );
+    if (!list.length) return null;
+    list.sort((a, b) => {
+      const tb = this.orderCreatedMs(b);
+      const ta = this.orderCreatedMs(a);
+      if (tb !== ta) return tb - ta;
+      return String(b._id).localeCompare(String(a._id));
+    });
+    return list[0];
+  }
+
+  private orderCreatedMs(o: any): number {
+    const raw = o?.createdAt ?? o?.created_at;
+    if (raw == null) return 0;
+    const t = new Date(raw).getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+
+  private syncActiveDeliveryFromQueue(): void {
+    const myId = this.getRiderId();
+    const primary = this.pickPrimaryInProgressOrder(this.ordersQueue, myId);
+
+    if (primary) {
+      const id = String(primary._id);
+      if (!this.currentOrder || String(this.currentOrder._id) !== id) {
+        this.startOrder(primary);
+      } else {
+        this.currentOrder = { ...this.currentOrder, ...primary };
+        this.customer = primary.location;
+        this.restaurant = primary.restaurantLocation;
+        this.target =
+          primary.pickupStatus === "pending" ? this.restaurant : this.customer;
+        this.updateRoute();
+      }
+      return;
+    }
+
+    if (this.currentOrder) {
+      const stillInProgress = this.ordersQueue.some(
+        (o) =>
+          String(o._id) === String(this.currentOrder._id) &&
+          this.normalizeStatus(o.status) === "inprogress",
+      );
+      if (!stillInProgress) {
+        this.isArrived = false;
+        this.handoffPin = "";
+        this.stopTracking();
+        this.currentOrder = null;
+        this.orderId = null;
+      }
+    }
   }
 
   // 🛑 STOP
