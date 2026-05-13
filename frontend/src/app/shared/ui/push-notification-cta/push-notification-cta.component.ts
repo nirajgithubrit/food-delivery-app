@@ -20,6 +20,11 @@ function isLoginUrl(rawUrl: string): boolean {
   return false;
 }
 
+function isDeliveryWorkspaceUrl(rawUrl: string): boolean {
+  const path = (rawUrl.split("?")[0] || "").toLowerCase();
+  return path.includes("/delivery");
+}
+
 @Component({
   selector: "app-push-notification-cta",
   standalone: true,
@@ -33,7 +38,7 @@ function isLoginUrl(rawUrl: string): boolean {
         role="region"
         aria-label="Push notifications"
       >
-        @if (messaging.shouldShowIosInstallHint()) {
+        @if (showIosInstallBanner()) {
           <p class="text-xs font-medium leading-relaxed text-slate-700 dark:text-slate-200">
             <span class="font-semibold text-slate-900 dark:text-white">iPhone:</span>
             install the app first — Safari
@@ -62,9 +67,7 @@ function isLoginUrl(rawUrl: string): boolean {
         }
         @if (messaging.permissionState() === "denied") {
           <p class="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-            Notifications are blocked. On iPhone:
-            <span class="font-medium">Settings → Notifications</span>
-            for this app (or Safari) and allow alerts.
+            Notifications are blocked. Turn them on in this browser’s site settings or your device’s notification settings for this app.
           </p>
         }
       </div>
@@ -87,11 +90,18 @@ export class PushNotificationCtaComponent {
 
   readonly busy = signal(false);
 
+  /** iPhone Safari “add to home” steps — hidden on rider delivery workspace and on Android. */
+  readonly showIosInstallBanner = computed(() => {
+    if (isDeliveryWorkspaceUrl(this.routerUrl())) return false;
+    return this.messaging.shouldShowIosInstallHint();
+  });
+
   readonly visible = computed(() => {
     if (!this.auth.isLoggedIn()) return false;
     if (isLoginUrl(this.routerUrl())) return false;
+    if (!this.messaging.isInstalledPwa()) return false;
     const denied = this.messaging.permissionState() === "denied";
-    const hint = this.messaging.shouldShowIosInstallHint();
+    const hint = this.showIosInstallBanner();
     const enable = this.messaging.shouldShowEnablePushButton();
     return hint || enable || denied;
   });

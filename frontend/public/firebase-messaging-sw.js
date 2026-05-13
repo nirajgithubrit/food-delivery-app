@@ -18,6 +18,29 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+/** Build absolute navigation target for notification taps (Android PWA + iOS). */
+function resolveClickTarget(data) {
+  const origin = self.location.origin.replace(/\/+$/, "");
+  let u = (data && data.click_url) || "";
+  u = String(u).trim();
+  if (!u && data && data.click_path) {
+    const p = String(data.click_path).startsWith("/")
+      ? String(data.click_path)
+      : "/" + String(data.click_path);
+    u = origin + p;
+  }
+  if (!u) return origin + "/";
+  if (!/^https?:\/\//i.test(u)) {
+    if (u.startsWith("/")) return origin + u;
+    try {
+      return new URL(u, origin + "/").href;
+    } catch {
+      return origin + "/";
+    }
+  }
+  return u;
+}
+
 messaging.onBackgroundMessage((payload) => {
   console.log("[firebase-messaging-sw] background message", payload);
 
@@ -35,7 +58,8 @@ messaging.onBackgroundMessage((payload) => {
   const tag =
     (payload.data && (payload.data.orderId || payload.data.type)) ||
     "fcm-default";
-  const clickUrl = (payload.data && payload.data.click_url) || "/";
+  const flat = { ...(payload.data || {}) };
+  const clickUrl = resolveClickTarget(flat);
 
   const options = {
     body,
@@ -43,7 +67,7 @@ messaging.onBackgroundMessage((payload) => {
     badge,
     tag: String(tag),
     renotify: true,
-    data: { ...(payload.data || {}), click_url: String(clickUrl) },
+    data: { ...flat, click_url: clickUrl },
     vibrate: [120, 60, 120],
     requireInteraction: false,
   };
@@ -53,42 +77,47 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener("notificationclick", (event) => {
   const data = (event.notification && event.notification.data) || {};
-  const raw = data.click_url || "/";
-  let url = String(raw);
-  try {
-    if (!/^https?:\/\//i.test(url)) {
-      url = new URL(url, self.location.origin).href;
-    }
-  } catch {
-    url = self.location.origin + "/";
-  }
+  const url = resolveClickTarget(data);
 
   event.notification.close();
   event.waitUntil(
     (async () => {
-      const allClients = await self.clients.matchAll({
+      const origin = self.location.origin;
+      const clients = await self.clients.matchAll({
         type: "window",
         includeUncontrolled: true,
       });
-      for (const client of allClients) {
-        if (
-          typeof client.url === "string" &&
-          client.url.startsWith(self.location.origin) &&
-          "focus" in client
-        ) {
+      const sameOrigin = clients.filter(
+        (c) => typeof c.url === "string" && c.url.startsWith(origin),
+      );
+
+      for (const client of sameOrigin) {
+        try {
           await client.focus();
-          if (typeof client.navigate === "function") {
-            try {
-              await client.navigate(url);
-              return;
-            } catch (_) {
-              /* fall through to openWindow */
-            }
+        } catch (_) {
+          /* continue */
+        }
+        if (typeof client.navigate === "function") {
+          try {
+            await client.navigate(url);
+            return;
+          } catch (err) {
+            console.warn("[firebase-messaging-sw] navigate failed", err);
           }
         }
       }
+
       if (self.clients.openWindow) {
-        await self.clients.openWindow(url);
+        const opened = await self.clients.openWindow(url);
+        if (opened) {
+          try {
+            await opened.focus();
+          } catch (_) {
+            /* no-op */
+          }
+          return;
+        }
+        await self.clients.openWindow(origin + "/");
       }
     })(),
   );

@@ -32,6 +32,7 @@ import { ToastService } from "./toast.service";
 
 const FCM_SW_URL = "/firebase-messaging-sw.js";
 const FCM_TOKEN_STORAGE_KEY = "fcmDeviceToken";
+const FCM_REGISTERED_LS_KEY = "gg_fcm_registered";
 const GET_TOKEN_MAX_ATTEMPTS = 4;
 const GET_TOKEN_BASE_DELAY_MS = 400;
 
@@ -39,8 +40,14 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function isAndroidDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android/i.test(navigator.userAgent);
+}
+
 function isIosLikeDevice(): boolean {
   if (typeof navigator === "undefined") return false;
+  if (isAndroidDevice()) return false;
   const ua = navigator.userAgent;
   return (
     /iPhone|iPod/i.test(ua) ||
@@ -54,6 +61,7 @@ function isStandaloneDisplayMode(): boolean {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.matchMedia("(display-mode: minimal-ui)").matches ||
     (navigator as Navigator & { standalone?: boolean }).standalone === true
   );
 }
@@ -85,13 +93,17 @@ export class MessagingService {
     afterNextRender(() => {
       if (isPlatformBrowser(this.platformId)) {
         this.refreshPermissionSignal();
-        document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState !== "visible") return;
+        const resync = () => {
           const now = Date.now();
-          if (now - this.lastVisibilityResyncMs < 60_000) return;
+          if (now - this.lastVisibilityResyncMs < 8_000) return;
           this.lastVisibilityResyncMs = now;
           void this.initForLoggedInUser();
+        };
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState !== "visible") return;
+          resync();
         });
+        window.addEventListener("focus", () => resync());
       }
     });
   }
@@ -101,6 +113,12 @@ export class MessagingService {
       console.debug("[FCM]", ...args);
     }
   }
+
+  /** True when the app runs as an installed PWA (not a normal browser tab). */
+  readonly isInstalledPwa = computed(() => {
+    if (!isPlatformBrowser(this.platformId)) return false;
+    return isStandaloneDisplayMode();
+  });
 
   /** iOS Safari in a tab: show install hint instead of auto-subscribe (prod default). */
   readonly shouldShowIosInstallHint = computed(() => {
@@ -115,7 +133,9 @@ export class MessagingService {
     if (!isPlatformBrowser(this.platformId)) return false;
     const p = this.permissionState();
     if (p === "denied" || p === "unsupported") return false;
-    if (this.shouldShowIosInstallHint()) return false;
+    if (p === "granted" && (this.fcmReady() || this.readFcmRegisteredPersisted())) {
+      return false;
+    }
     return p === "default" || !this.fcmReady();
   });
 
@@ -139,8 +159,8 @@ export class MessagingService {
     if (!isPlatformBrowser(this.platformId)) return;
     this.refreshPermissionSignal();
 
-    if (isIosLikeDevice() && this.iosPushRequiresStandalone() && !isStandaloneDisplayMode()) {
-      this.log("init skip: iOS requires installed PWA (Add to Home Screen) for push");
+    if (!isStandaloneDisplayMode()) {
+      this.log("init skip: FCM runs in installed PWA only (not a normal browser tab)");
       return;
     }
 
@@ -150,7 +170,7 @@ export class MessagingService {
     }
 
     if (Notification.permission !== "granted") {
-      this.log("init skip: awaiting explicit permission (use Enable notifications)");
+      this.log("init skip: awaiting explicit permission (use Enable notifications in the app)");
       return;
     }
 
@@ -162,8 +182,10 @@ export class MessagingService {
     if (!isPlatformBrowser(this.platformId)) return;
     this.refreshPermissionSignal();
 
-    if (isIosLikeDevice() && this.iosPushRequiresStandalone() && !isStandaloneDisplayMode()) {
-      this.toast.error("Install the app: Safari → Share → Add to Home Screen, then open the app and enable alerts.");
+    if (!isStandaloneDisplayMode()) {
+      this.toast.info(
+        "Install this site as an app (browser menu → Install app or Add to Home Screen), then open the app and enable notifications there.",
+      );
       return;
     }
 
@@ -173,15 +195,17 @@ export class MessagingService {
   async unregisterFromBackend(): Promise<void> {
     if (!isPlatformBrowser(this.platformId)) return;
     const token = this.lastRegisteredToken ?? this.readStoredToken();
-    if (!token) return;
-    try {
-      await firstValueFrom(this.api.unregisterFcmToken(token));
-      this.log("unregister: backend OK");
-    } catch (e) {
-      this.log("unregister: backend error (continuing local clear)", e);
+    if (token) {
+      try {
+        await firstValueFrom(this.api.unregisterFcmToken(token));
+        this.log("unregister: backend OK");
+      } catch (e) {
+        this.log("unregister: backend error (continuing local clear)", e);
+      }
     }
     this.lastRegisteredToken = null;
     this.clearStoredToken();
+    this.clearFcmRegisteredPersisted();
     this.fcmReady.set(false);
   }
 
@@ -260,7 +284,32 @@ export class MessagingService {
 
     this.lastRegisteredToken = token;
     this.fcmReady.set(true);
+    this.markFcmRegisteredPersisted();
     this.log("FCM ready, token tail", token.slice(-12));
+  }
+
+  private readFcmRegisteredPersisted(): boolean {
+    try {
+      return localStorage.getItem(FCM_REGISTERED_LS_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  private markFcmRegisteredPersisted(): void {
+    try {
+      localStorage.setItem(FCM_REGISTERED_LS_KEY, "1");
+    } catch {
+      /* no-op */
+    }
+  }
+
+  private clearFcmRegisteredPersisted(): void {
+    try {
+      localStorage.removeItem(FCM_REGISTERED_LS_KEY);
+    } catch {
+      /* no-op */
+    }
   }
 
   private async getTokenWithRetries(
