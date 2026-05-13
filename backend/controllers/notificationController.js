@@ -12,6 +12,12 @@ exports.registerFcmToken = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, { registered: false, reason: "legacy-session" });
   }
 
+  // One device token must belong to at most one user — avoids duplicate deliveries on iOS/Web
+  // when the same browser re-registers after login as a different account.
+  await User.updateMany(
+    { _id: { $ne: id }, fcmTokens: token },
+    { $pull: { fcmTokens: token } },
+  );
   await User.findByIdAndUpdate(id, { $addToSet: { fcmTokens: token } });
 
   ApiResponse.success(res, { registered: true });

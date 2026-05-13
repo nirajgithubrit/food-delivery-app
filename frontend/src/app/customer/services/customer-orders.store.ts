@@ -115,6 +115,9 @@ export class CustomerOrdersStore {
   }
 
   loadOrderById(orderId: string): void {
+    if (String(this.selectedTrackingOrder()?._id) !== orderId) {
+      this.selectedTrackingOrder.set(null);
+    }
     this.loadingTracking.set(true);
     this.error.set("");
     this.api.getCustomerOrderById(orderId).subscribe({

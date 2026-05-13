@@ -7,7 +7,28 @@
     <div
       class="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:py-3 sm:pt-3"
     >
-      <div class="min-w-0 pr-12 sm:max-w-[55%] sm:pr-0">
+      <div class="flex min-w-0 items-start gap-2 sm:max-w-[55%] sm:flex-1 sm:items-center">
+        @if (showMultiOrderBack()) {
+          <a
+            routerLink="/customer/orders"
+            class="track-back focus-ring mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/90 text-slate-700 shadow-sm no-underline transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100 dark:hover:bg-slate-800 sm:mt-0"
+            aria-label="Back to active orders"
+          >
+            <svg
+              class="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </a>
+        }
+        <div class="min-w-0 flex-1 pr-14 sm:pr-0">
         <p
           class="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-600"
         >
@@ -25,11 +46,12 @@
         >
           Order tracking
         </p>
+        </div>
       </div>
 
       @if (order(); as ord) {
         <div
-          class="flex flex-wrap items-center justify-end gap-2 sm:shrink-0"
+          class="flex flex-wrap items-center justify-end gap-2 pr-14 sm:shrink-0 sm:pr-0"
         >
           <span
             class="shrink-0 rounded-full bg-slate-100 px-3 py-1 font-mono text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
@@ -110,8 +132,8 @@
               </div>
               <div class="flex w-full max-w-sm flex-col gap-2 sm:flex-row">
                 <a
-                  routerLink="/customer/menu"
-                  (click)="clearSavedOrder()"
+                  href="/customer/menu"
+                  (click)="goToMenu($event)"
                   class="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:brightness-[1.04] hover:shadow-lift active:scale-[0.98] no-underline"
                 >
                   <svg
@@ -154,7 +176,8 @@
                 </p>
               </div>
               <a
-                routerLink="/customer/menu"
+                href="/customer/menu"
+                (click)="goToMenu($event)"
                 class="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] sm:w-auto no-underline"
               >
                 Back to menu
@@ -368,7 +391,8 @@
             No active order. Start from the menu.
           </p>
           <a
-            routerLink="/customer/menu"
+            href="/customer/menu"
+            (click)="goToMenu($event)"
             class="focus-ring mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] no-underline"
           >
             Browse food
