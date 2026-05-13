@@ -67,31 +67,66 @@
                 #{{ o._id.toString().slice(-5) }}
               </p>
             </div>
+            <div class="flex flex-wrap items-center justify-end gap-2">
             <span
               class="inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
               [ngClass]="{
                 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200':
-                  o.status === 'completed',
+                  o.status === 'delivered',
                 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100':
-                  o.status === 'inprogress',
+                  o.status === 'out_for_delivery' || o.status === 'picked_up',
                 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100':
-                  o.status === 'confirmed',
+                  o.status === 'accepted' || o.status === 'preparing' || o.status === 'ready_for_pickup',
                 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-100':
-                  o.status === 'rejected',
+                  o.status === 'rejected' || o.status === 'cancelled',
                 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-200':
                   o.status === 'pending',
               }"
             >
               {{ o.status | titlecase }}
             </span>
+            <span
+              class="inline-flex items-center rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-100"
+              [title]="isUPI(o) ? 'UPI — verify payment before completing' : 'Cash on delivery'"
+            >
+              Pay: {{ paymentLabel(o) }}
+            </span>
+            </div>
           </div>
 
           <div
-            class="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between"
+            class="mt-3 flex flex-col gap-3 border-t border-slate-100 pt-3 dark:border-slate-800"
           >
-            <div>
-              <p class="text-[10px] text-slate-500">Phone</p>
-              <p class="text-sm font-medium text-slate-900 dark:text-white">{{ o.phone }}</p>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <p class="text-[10px] text-slate-500">Phone</p>
+                <p class="text-sm font-medium text-slate-900 dark:text-white">{{ o.phone }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-500">Payment</p>
+                <p class="text-sm font-medium text-slate-900 dark:text-white">
+                  {{ paymentLabel(o) }}
+                  @if (isUPI(o)) {
+                    <span
+                      class="ml-1.5 inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                      [ngClass]="{
+                        'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100':
+                          o.paymentStatus === 'pending',
+                        'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100':
+                          o.paymentStatus === 'verified',
+                      }"
+                    >
+                      {{ o.paymentStatus === "verified" ? "Paid" : "Pending verify" }}
+                    </span>
+                  } @else {
+                    <span
+                      class="ml-1.5 inline-flex rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      COD
+                    </span>
+                  }
+                </p>
+              </div>
             </div>
             <div class="flex flex-wrap gap-1.5">
               <a
@@ -139,26 +174,42 @@
             <button
               type="button"
               class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:shadow-md active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50 dark:bg-white dark:text-slate-900"
-              [disabled]="isDisabled(o, 'confirm')"
-              (click)="update(o, 'confirmed')"
+              [disabled]="isDisabled(o, 'accept')"
+              (click)="update(o, 'accepted')"
             >
-              Confirm
+              Accept
             </button>
             <button
               type="button"
               class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:bg-emerald-700 active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50"
-              [disabled]="isDisabled(o, 'progress')"
-              (click)="update(o, 'inprogress')"
+              [disabled]="isDisabled(o, 'prepare')"
+              (click)="update(o, 'preparing')"
+            >
+              Preparing
+            </button>
+            <button
+              type="button"
+              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50"
+              [disabled]="isDisabled(o, 'ready')"
+              (click)="update(o, 'ready_for_pickup')"
+            >
+              Ready
+            </button>
+            <button
+              type="button"
+              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:bg-sky-700 active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50"
+              [disabled]="isDisabled(o, 'dispatch')"
+              (click)="update(o, 'out_for_delivery')"
             >
               Dispatch
             </button>
             <button
               type="button"
-              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 ease-out hover:shadow-lift hover:brightness-[1.03] active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50"
-              [disabled]="isDisabled(o, 'done')"
-              (click)="update(o, 'completed')"
+              class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:bg-emerald-800 active:scale-[0.98] min-h-[2.25rem] disabled:pointer-events-none disabled:opacity-50"
+              [disabled]="isDisabled(o, 'delivered')"
+              (click)="update(o, 'delivered')"
             >
-              Done
+              Delivered
             </button>
             <button
               type="button"

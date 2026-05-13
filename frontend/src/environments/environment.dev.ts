@@ -1,15 +1,15 @@
 import type { AppEnvironment } from "./environment.shared";
 
+/** Hosted DEV (e.g. Netlify `fooddeliveryappdev` + Render `food-delivery-app-dev`). */
 export const environment: AppEnvironment = {
   production: false,
-  apiUrl: "http://localhost:3000/api",
-  socketUrl: "http://localhost:3000",
+  apiUrl: "https://food-delivery-app-dev.onrender.com/api",
+  socketUrl: "https://food-delivery-app-dev.onrender.com",
   googleMapsApiKey: "AIzaSyCeE-s4yTloqvacHp6cBjnsbQL48vKtP4U",
-  webPushSiteUrl: "http://127.0.0.1:4200",
-  /** Allow FCM on localhost in a normal tab (not only installed PWA). */
-  pushNotificationsAllowInBrowserTab: true,
+  webPushSiteUrl: "https://fooddeliveryappdev.netlify.app",
   fcmDebug: true,
   iosPushRequiresStandalone: false,
+  pushNotificationsAllowInBrowserTab: false,
   firebase: {
     apiKey: "AIzaSyDt3cIVT45vFEfaqnhnrYcaRwFpyPHvyf4",
     authDomain: "food-delivery-app-27518.firebaseapp.com",
@@ -20,9 +20,4 @@ export const environment: AppEnvironment = {
     vapidKey:
       "BKbK9j4gQpis64KPFDT-I_7ciUdxjYhM79yKFdstny-8OJSWfTN16jR5gIF6W8hdIRZjsfFSuFckvEMQ0R_OOfM",
   },
-  // When App Check enforces Authentication, uncomment and fill from Firebase Console → App Check:
-  // firebaseAppCheck: {
-  //   recaptchaEnterpriseSiteKey: "YOUR_ENTERPRISE_SITE_KEY",
-  //   debugToken: true, // then replace with the registered debug token string for localhost
-  // },
 };

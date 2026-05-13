@@ -6,7 +6,17 @@ const OrderSchema = new mongoose.Schema({
   totalAmount: { type: Number, default: 0 },
   status: {
     type: String,
-    enum: ["pending", "confirmed", "inprogress", "completed", "rejected"],
+    enum: [
+      "pending",
+      "accepted",
+      "preparing",
+      "ready_for_pickup",
+      "picked_up",
+      "out_for_delivery",
+      "delivered",
+      "cancelled",
+      "rejected",
+    ],
     default: "pending",
     index: true,
   },
@@ -43,6 +53,8 @@ const OrderSchema = new mongoose.Schema({
   },
   rejectedBy: { type: [String], default: [] },
   phone: String,
+  /** Customer tells rider at door; never broadcast on sockets (see stripDeliveryPin). */
+  deliveryPin: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -67,12 +67,30 @@ export class ApiService {
     return this.http.get<unknown[]>(`${this.baseUrl}/orders/me`, { withCredentials: true });
   }
 
+  getCustomerActiveOrders(): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`${this.baseUrl}/orders/active`, { withCredentials: true });
+  }
+
+  getCustomerOrderHistory(): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`${this.baseUrl}/orders/history`, { withCredentials: true });
+  }
+
+  getCustomerOrderById(orderId: string): Observable<unknown> {
+    return this.http.get(`${this.baseUrl}/orders/${orderId}`, { withCredentials: true });
+  }
+
   getMyDeliveryOrders() {
     return this.http.get(`${this.baseUrl}/orders/my`, { withCredentials: true });
   }
 
-  updateOrder(id: string, status: string) {
-    return this.http.put(`${this.baseUrl}/orders/${id}`, { status }, { withCredentials: true });
+  updateOrder(
+    id: string,
+    payload: string | { status: string; deliveryPin?: string },
+  ) {
+    const body = typeof payload === "string" ? { status: payload } : payload;
+    return this.http.put(`${this.baseUrl}/orders/${id}`, body, {
+      withCredentials: true,
+    });
   }
 
   updatePickupStatus(id: string) {

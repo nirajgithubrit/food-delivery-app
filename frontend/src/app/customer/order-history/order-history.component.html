@@ -1,0 +1,52 @@
+<section class="mx-auto max-w-6xl px-3 py-4 sm:px-5 sm:py-6">
+  <div class="mb-4 flex items-center justify-between">
+    <div>
+      <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-600">Orders</p>
+      <p
+        class="font-display text-xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-2xl md:text-3xl"
+        role="heading"
+        aria-level="1"
+      >
+        Order History
+      </p>
+    </div>
+    <a
+      routerLink="/customer/orders"
+      class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 no-underline hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100"
+    >
+      Active
+    </a>
+  </div>
+
+  @if (store.loadingHistory()) {
+    <p class="text-sm text-slate-500">Loading order history…</p>
+  } @else if (store.error()) {
+    <p class="text-sm text-rose-600">{{ store.error() }}</p>
+  } @else if (store.orderHistory().length === 0) {
+    <div class="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500 dark:border-slate-700">
+      No history yet.
+    </div>
+  } @else {
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      @for (o of store.orderHistory(); track o._id) {
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <p class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">#{{ o._id.slice(-6) }}</p>
+            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase text-slate-700">
+              {{ o.status.replaceAll('_', ' ') }}
+            </span>
+          </div>
+          <p class="text-sm font-semibold text-slate-900 dark:text-white">₹{{ o.totalAmount }}</p>
+          <button
+            type="button"
+            (click)="reorder()"
+            class="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100"
+          >
+            Reorder
+          </button>
+        </article>
+      }
+    </div>
+  }
+</section>
+

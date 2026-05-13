@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnDestroy,
+  DestroyRef,
   OnInit,
   inject,
   signal,
@@ -29,42 +29,65 @@ import { LogoutButtonComponent } from "../../shared/ui/logout-button/logout-butt
   styleUrl: "./orders.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class OrdersComponent implements OnInit, OnDestroy {
+export class OrdersComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly socket = inject(SocketService);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly orders = signal<any[]>([]);
   readonly loading = signal(true);
 
+  private socketTeardown?: () => void;
+
   ngOnInit(): void {
     this.load();
 
-    this.socket.listen("new-order-admin", () => {
-      this.load();
-    });
+    this.socket.onReconnect(() => this.wireSocketListeners());
+    this.wireSocketListeners();
 
-    this.socket.listen("order-updated", (updatedOrder: any) => {
-      this.orders.update((list) => {
-        const index = list.findIndex(
-          (o) => String(o._id) === String(updatedOrder._id),
-        );
-        if (index > -1) {
-          const next = [...list];
-          next[index] = updatedOrder;
-          return next;
-        }
-        return [updatedOrder, ...list];
-      });
+    this.destroyRef.onDestroy(() => {
+      this.socketTeardown?.();
     });
+  }
+
+  private wireSocketListeners(): void {
+    this.socketTeardown?.();
+    const unsubs: Array<() => void> = [];
+
+    unsubs.push(
+      this.socket.subscribeEvent("new-order-admin", () => {
+        this.load();
+      }),
+    );
+
+    unsubs.push(
+      this.socket.subscribeEvent("order-updated", (updatedOrder: any) => {
+        this.orders.update((list) => {
+          const index = list.findIndex(
+            (o) => String(o._id) === String(updatedOrder._id),
+          );
+          if (index > -1) {
+            const next = [...list];
+            next[index] = { ...list[index], ...updatedOrder };
+            return next;
+          }
+          return [updatedOrder, ...list];
+        });
+      }),
+    );
+
+    this.socketTeardown = () => {
+      for (const u of unsubs) u();
+    };
   }
 
   load(): void {
     this.loading.set(true);
     this.api.getOrders().subscribe({
       next: (res: any) => {
-        const list = Array.isArray(res) ? res : [];
-        this.orders.set(list);
+        const raw = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        this.orders.set(raw);
         this.loading.set(false);
       },
       error: () => {
@@ -98,25 +121,41 @@ export class OrdersComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
-    this.socket.socket.off("new-order-admin");
-    this.socket.socket.off("order-updated");
+  paymentLabel(order: { paymentMethod?: string } | null | undefined): string {
+    const raw = String(order?.paymentMethod ?? "cod").trim().toLowerCase();
+    return raw === "upi" ? "UPI" : "Cash on delivery";
+  }
+
+  isUPI(order: { paymentMethod?: string } | null | undefined): boolean {
+    return String(order?.paymentMethod ?? "cod").trim().toLowerCase() === "upi";
   }
 
   isDisabled(order: any, action: string): boolean {
     const status = order.status;
-    if (status === "completed" || status === "rejected") return true;
+    if (status === "delivered" || status === "cancelled" || status === "rejected") return true;
+    const riderOk = this.hasRider(order);
     switch (action) {
-      case "confirm":
+      case "accept":
         return status !== "pending";
-      case "progress":
-        return status !== "confirmed";
-      case "done":
-        return status !== "inprogress";
+      case "prepare":
+        return status !== "accepted" || !riderOk;
+      case "ready":
+        return status !== "preparing" || !riderOk;
+      case "dispatch":
+        return (status !== "ready_for_pickup" && status !== "picked_up") || !riderOk;
+      case "delivered":
+        return status !== "out_for_delivery";
       case "reject":
         return status !== "pending";
       default:
         return false;
     }
+  }
+
+  private hasRider(order: { deliveryBoyId?: string | null } | null | undefined): boolean {
+    const raw = order?.deliveryBoyId;
+    if (raw == null || raw === "") return false;
+    const v = String(raw).trim().toLowerCase();
+    return v !== "null" && v !== "undefined";
   }
 }

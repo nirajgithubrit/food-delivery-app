@@ -3,7 +3,8 @@ import { Routes } from "@angular/router";
 import { CartComponent } from "./customer/cart/cart.component";
 import { MenuComponent } from "./customer/menu/menu.component";
 import { LoginComponent } from "./core/login/login.component";
-import { OrderTrackingComponent } from "./customer/order-tracking/order-tracking.component";
+import { ActiveOrdersComponent } from "./customer/active-orders/active-orders.component";
+import { OrderHistoryComponent } from "./customer/order-history/order-history.component";
 
 import { AddItemComponent } from "./admin/add-item/add-item.component";
 import { OrdersComponent } from "./admin/orders/orders.component";
@@ -69,9 +70,21 @@ export const routes: Routes = [
     children: [
       { path: "menu", component: MenuComponent },
       { path: "cart", component: CartComponent },
-      { path: "track", component: OrderTrackingComponent },
+      { path: "orders", component: ActiveOrdersComponent },
+      { path: "history", component: OrderHistoryComponent },
+      { path: "track", redirectTo: "orders", pathMatch: "full" },
       { path: "", redirectTo: "menu", pathMatch: "full" },
     ],
+  },
+
+  {
+    path: "orders/:orderId",
+    canActivate: [authGuard, RoleGuard],
+    data: { roles: ["customer"] },
+    loadComponent: () =>
+      import("./customer/order-tracking/order-tracking.component").then(
+        (m) => m.OrderTrackingComponent,
+      ),
   },
 
   {

@@ -30,3 +30,21 @@ exports.removeFcmToken = asyncHandler(async (req, res) => {
 
   ApiResponse.success(res, { removed: true });
 });
+
+const { notifyUserById } = require("../services/pushNotification.service");
+
+/** Admin-only smoke test for FCM delivery to the signed-in admin device. */
+exports.sendTestPush = asyncHandler(async (req, res) => {
+  const id = String(req.user?.id || "");
+  if (!/^[a-f0-9A-F]{24}$/.test(id)) {
+    throw new AppError("Push test requires a valid admin session.", 400);
+  }
+
+  await notifyUserById(
+    id,
+    { title: "Test notification", body: "FCM delivery test from the server." },
+    { type: "push_test", click_path: "/admin/orders" },
+  );
+
+  ApiResponse.success(res, { sent: true });
+});

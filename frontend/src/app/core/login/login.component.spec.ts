@@ -42,7 +42,11 @@ describe("LoginComponent", () => {
           },
         },
         { provide: ApiService, useValue: { loginAdmin: () => of({ token: "x" }) } },
-        { provide: SocketService, useValue: { reconnect: () => undefined } },
+        { provide: SocketService, useValue: {
+          reconnect: () => undefined,
+          onReconnect: () => () => undefined,
+          subscribeEvent: () => () => undefined,
+        } },
         { provide: ToastService, useValue: { success: () => undefined, error: () => undefined } },
         { provide: NotificationService, useValue: { initForLoggedInUser: () => Promise.resolve() } },
       ],

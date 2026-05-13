@@ -64,6 +64,31 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "dev": {
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "outputHashing": "all",
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1.15MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2MB",
+                  "maximumError": "4MB"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.dev.ts"
+                }
+              ],
+              "serviceWorker": "ngsw-config.json"
             }
           },
           "defaultConfiguration": "production"
@@ -76,6 +101,9 @@
             },
             "development": {
               "buildTarget": "frontend:build:development"
+            },
+            "dev": {
+              "buildTarget": "frontend:build:dev"
             }
           },
           "defaultConfiguration": "development"

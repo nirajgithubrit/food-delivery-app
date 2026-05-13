@@ -1,10 +1,14 @@
 const AppError = require("./AppError");
 
 const VALID_TRANSITIONS = {
-  pending: ["confirmed", "rejected"],
-  confirmed: ["inprogress", "rejected"],
-  inprogress: ["completed"],
-  completed: [],
+  pending: ["accepted", "cancelled", "rejected"],
+  accepted: ["preparing", "cancelled", "rejected"],
+  preparing: ["ready_for_pickup", "cancelled", "rejected"],
+  ready_for_pickup: ["picked_up", "out_for_delivery", "cancelled"],
+  picked_up: ["out_for_delivery", "cancelled"],
+  out_for_delivery: ["delivered", "cancelled"],
+  delivered: [],
+  cancelled: [],
   rejected: [],
 };
 

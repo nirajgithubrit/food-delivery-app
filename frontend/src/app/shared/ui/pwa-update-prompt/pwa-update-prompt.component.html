@@ -1,0 +1,53 @@
+@if (pwa.updateReady()) {
+  <div
+    class="pwa-update-host fixed inset-x-0 bottom-0 z-[10001] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 pointer-events-none"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="pwa-update-title"
+    aria-describedby="pwa-update-desc"
+  >
+    <div
+      class="pointer-events-auto flex w-full max-w-lg flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95"
+    >
+      <div class="flex gap-3">
+        <div
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-orange-500 text-xl text-white shadow-md"
+          aria-hidden="true"
+        >
+          ✨
+        </div>
+        <div class="min-w-0 flex-1">
+          <p
+            id="pwa-update-title"
+            class="font-display text-base font-bold leading-tight text-slate-900 dark:text-white"
+          >
+            New version available
+          </p>
+          <p
+            id="pwa-update-desc"
+            class="mt-1 text-sm leading-snug text-slate-600 dark:text-slate-300"
+          >
+            An update is ready. Tap Update to get the latest fixes and features.
+          </p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2 sm:justify-end">
+        <button
+          type="button"
+          class="focus-ring inline-flex min-h-[2.5rem] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50 active:scale-[0.99] sm:flex-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+          (click)="onLater()"
+        >
+          Later
+        </button>
+        <button
+          type="button"
+          class="focus-ring inline-flex min-h-[2.5rem] flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-brand-500 to-orange-500 px-4 text-sm font-semibold text-white shadow-md transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-60 sm:flex-none"
+          [disabled]="applying()"
+          (click)="onUpdate()"
+        >
+          {{ applying() ? "Updating…" : "Update" }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
