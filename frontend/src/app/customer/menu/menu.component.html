@@ -12,7 +12,7 @@
         <p
           class="font-hero text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400 sm:text-xs sm:tracking-[0.22em]"
         >
-          Gir Gamthi
+          {{ branding.name() }}
         </p>
         <p
           class="menu-page-title mt-0.5 font-display text-lg font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-xl md:text-2xl lg:text-3xl"
@@ -40,6 +40,19 @@
   </header>
 
   <section class="mx-auto max-w-6xl px-3 py-3 sm:px-5 sm:py-5">
+    @if (menuRefreshing()) {
+      <p
+        class="mb-3 flex items-center justify-center gap-2 text-center text-xs font-medium text-brand-600 dark:text-brand-400"
+        role="status"
+        aria-live="polite"
+      >
+        <span
+          class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-300 border-t-brand-600"
+          aria-hidden="true"
+        ></span>
+        Updating menu…
+      </p>
+    }
     <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
       <label class="sr-only" for="menu-search">Search menu</label>
       <input

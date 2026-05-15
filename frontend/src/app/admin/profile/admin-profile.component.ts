@@ -11,6 +11,7 @@ import { RouterLink } from "@angular/router";
 import { GoogleMapsModule } from "@angular/google-maps";
 import { ApiService } from "../../services/api.service";
 import { ToastService } from "../../shared/services/toast.service";
+import { BrandingService } from "../../shared/services/branding.service";
 
 @Component({
   selector: "app-admin-profile",
@@ -22,6 +23,7 @@ import { ToastService } from "../../shared/services/toast.service";
 export class AdminProfileComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
+  private readonly branding = inject(BrandingService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -48,6 +50,8 @@ export class AdminProfileComponent implements OnInit {
 
   currentPassword = "";
   newPassword = "";
+  logoUrl = "";
+  bannerUrl = "";
   logoFile: File | null = null;
   bannerFile: File | null = null;
 
@@ -64,6 +68,8 @@ export class AdminProfileComponent implements OnInit {
         this.category = String(r["category"] || "");
         this.description = String(r["description"] || "");
         this.isOpen = r["isOpen"] !== false;
+        this.logoUrl = String(r["logoUrl"] || "");
+        this.bannerUrl = String(r["bannerUrl"] || "");
         const loc = r["location"] as { lat?: number; lng?: number } | undefined;
         if (loc && typeof loc.lat === "number" && typeof loc.lng === "number") {
           this.center.set({ lat: loc.lat, lng: loc.lng });
@@ -109,7 +115,10 @@ export class AdminProfileComponent implements OnInit {
         lng: m.lng,
       })
       .subscribe({
-        next: () => this.toast.success("Profile saved"),
+        next: () => {
+          this.toast.success("Profile saved");
+          void this.branding.refreshFromApi();
+        },
         error: (err) => {
           const msg =
             err.error?.error?.message ?? err.message ?? "Save failed";
@@ -129,10 +138,14 @@ export class AdminProfileComponent implements OnInit {
     if (this.logoFile) fd.append("logo", this.logoFile);
     if (this.bannerFile) fd.append("banner", this.bannerFile);
     this.api.updateRestaurantImages(fd).subscribe({
-      next: () => {
+      next: (r) => {
+        const body = r as Record<string, unknown>;
         this.toast.success("Images updated");
+        this.logoUrl = String(body["logoUrl"] || this.logoUrl);
+        this.bannerUrl = String(body["bannerUrl"] || this.bannerUrl);
         this.logoFile = null;
         this.bannerFile = null;
+        void this.branding.refreshFromApi();
       },
       error: (err) => {
         const msg =

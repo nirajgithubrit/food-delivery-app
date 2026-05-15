@@ -299,9 +299,17 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     this.currentOrder = order;
     this.orderId = order._id;
 
+    const drop = this.getCustomerDropoff(order);
+    if (!drop) {
+      this.toast.error("This order is missing a delivery address. It cannot be opened on the map.");
+      this.currentOrder = null;
+      this.orderId = null;
+      return;
+    }
+
     this.socket.emit('join-order', this.orderId);
 
-    this.customer = order.location;
+    this.customer = drop;
     this.restaurant = order.restaurantLocation;
 
     // 🔥 PHASE
@@ -520,7 +528,7 @@ export class DeliveryComponent implements OnInit, OnDestroy {
       (o) =>
         String(o.deliveryBoyId) === myId &&
         this.riderMapStatuses.has(this.normalizeStatus(o?.status)) &&
-        o?.location &&
+        this.getCustomerDropoff(o) &&
         o?.restaurantLocation,
     );
     if (!list.length) return null;
@@ -550,7 +558,10 @@ export class DeliveryComponent implements OnInit, OnDestroy {
         this.startOrder(primary);
       } else {
         this.currentOrder = { ...this.currentOrder, ...primary };
-        this.customer = primary.location;
+        const drop = this.getCustomerDropoff(primary);
+        if (drop) {
+          this.customer = drop;
+        }
         this.restaurant = primary.restaurantLocation;
         this.target =
           ['accepted', 'preparing', 'ready_for_pickup', 'assigned'].includes(this.normalizeStatus(primary.status))
@@ -595,6 +606,25 @@ export class DeliveryComponent implements OnInit, OnDestroy {
     const dx = a.lat - b.lat;
     const dy = a.lng - b.lng;
     return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  private getCustomerDropoff(order: any): { lat: number; lng: number } | null {
+    const da = order?.deliveryAddress;
+    if (da && da.latitude != null && da.longitude != null) {
+      const lat = Number(da.latitude);
+      const lng = Number(da.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+      }
+    }
+    if (order?.location?.lat != null && order?.location?.lng != null) {
+      const lat = Number(order.location.lat);
+      const lng = Number(order.location.lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+      }
+    }
+    return null;
   }
 
   private normalizeOrders(payload: any): any[] {

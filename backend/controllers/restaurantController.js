@@ -6,6 +6,7 @@ const AppError = require("../utils/AppError");
 const asyncHandler = require("../middleware/asyncHandler");
 const config = require("../config");
 const { getPrimaryRestaurantSnapshot } = require("../utils/restaurantResolve");
+const { getBrandingSnapshot, buildWebManifest } = require("../utils/branding");
 const { v2: cloudinary } = require("cloudinary");
 const streamifier = require("streamifier");
 
@@ -37,6 +38,20 @@ async function uploadBuffer(buffer, folder) {
     streamifier.createReadStream(buffer).pipe(stream);
   });
 }
+
+exports.getPublicBranding = asyncHandler(async (req, res) => {
+  const branding = await getBrandingSnapshot();
+  res.set("Cache-Control", "public, max-age=60");
+  ApiResponse.success(res, branding);
+});
+
+exports.getWebManifest = asyncHandler(async (req, res) => {
+  const branding = await getBrandingSnapshot();
+  const manifest = buildWebManifest(branding);
+  res.set("Content-Type", "application/manifest+json");
+  res.set("Cache-Control", "public, max-age=60");
+  res.status(200).json(manifest);
+});
 
 exports.getMyRestaurant = asyncHandler(async (req, res) => {
   if (req.user.role !== "admin") {
@@ -107,6 +122,12 @@ exports.updateMyRestaurant = asyncHandler(async (req, res) => {
   }
 
   await r.save();
+
+  const io = req.app.get("io");
+  if (io) {
+    io.emit("branding-updated", { at: Date.now() });
+  }
+
   ApiResponse.success(res, r);
 });
 
@@ -132,6 +153,12 @@ exports.updateRestaurantImages = asyncHandler(async (req, res) => {
   }
 
   await r.save();
+
+  const io = req.app.get("io");
+  if (io) {
+    io.emit("branding-updated", { at: Date.now() });
+  }
+
   ApiResponse.success(res, r);
 });
 

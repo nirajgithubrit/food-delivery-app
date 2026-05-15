@@ -2,6 +2,41 @@
   class="min-h-dvh bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900 transition-[background] duration-300 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-100"
 >
   <router-outlet />
+
+  @if (orderHandoff.active(); as h) {
+    <div
+      class="order-handoff-backdrop fixed inset-0 z-[10000] flex flex-col items-center justify-center px-6"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div
+        class="order-handoff-card relative max-w-sm rounded-3xl border border-white/60 bg-white/95 p-8 text-center shadow-2xl shadow-orange-500/15 ring-1 ring-slate-200/80 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/95 dark:ring-slate-700/80"
+      >
+        <div
+          class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-orange-500 text-3xl text-white shadow-lg shadow-orange-500/35"
+          aria-hidden="true"
+        >
+          ✓
+        </div>
+        <p class="mt-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-600 dark:text-brand-400">
+          Order placed
+        </p>
+        <p class="mt-2 font-display text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Opening live tracking…
+        </p>
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          Order <span class="font-mono font-semibold">#{{ h.orderId.toString().slice(-6) }}</span>
+        </p>
+        <div class="mt-6 flex justify-center gap-1.5" aria-hidden="true">
+          @for (dot of [0, 1, 2]; track dot) {
+            <span class="order-handoff-dot h-2 w-2 rounded-full bg-brand-500/90 dark:bg-brand-400/90"></span>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
   <app-pwa-update-prompt />
   <app-push-notification-cta />
   <app-theme-toggle

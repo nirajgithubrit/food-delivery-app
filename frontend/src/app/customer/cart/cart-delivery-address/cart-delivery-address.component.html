@@ -1,0 +1,121 @@
+<div class="mt-6 space-y-3">
+  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+    Delivery address
+  </p>
+
+  @if (mapsStatus() === "unavailable") {
+    <p class="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+      Google Maps did not load. Refresh the page or check your network, then try again.
+    </p>
+  }
+
+  <div class="grid gap-2">
+    <label class="text-xs font-medium text-slate-600 dark:text-slate-300" for="cart-addr-search">
+      Search
+    </label>
+    <input
+      #searchInput
+      id="cart-addr-search"
+      type="text"
+      autocomplete="off"
+      placeholder="Search building, street, area…"
+      class="focus-ring w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+    />
+    <p class="text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+      Choose an address from the dropdown. You can fine-tune by dragging the pin on the map.
+    </p>
+  </div>
+
+  <button
+    type="button"
+    class="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-brand-400 hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+    [disabled]="locationBusy() || mapsStatus() === 'unavailable'"
+    (click)="useCurrentLocation()"
+  >
+    @if (locationBusy()) {
+      <span
+        class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600"
+        aria-hidden="true"
+      ></span>
+      <span>Getting location…</span>
+    } @else {
+      <span aria-hidden="true">📍</span>
+      <span>Use current location</span>
+    }
+  </button>
+
+  <p class="text-xs text-slate-500 dark:text-slate-400">
+    Save as
+  </p>
+  <p class="text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+    Home and Office are remembered after you place an order with that tag. Tap them anytime to autofill. Use Other for a one-off address.
+  </p>
+  <div class="grid grid-cols-3 gap-2">
+    @for (opt of ['home', 'office', 'other']; track opt) {
+      <button
+        type="button"
+        class="focus-ring rounded-2xl border px-2 py-2 text-xs font-semibold capitalize transition active:scale-[0.98]"
+        [class.border-brand-500]="addressType() === opt"
+        [class.bg-brand-50]="addressType() === opt"
+        [class.dark:bg-slate-800]="addressType() === opt"
+        [class.border-slate-200]="addressType() !== opt"
+        [class.dark:border-slate-700]="addressType() !== opt"
+        [class.text-slate-700]="addressType() !== opt"
+        [class.dark:text-slate-200]="addressType() !== opt"
+        (click)="setAddressType(opt === 'home' ? 'home' : opt === 'office' ? 'office' : 'other')"
+      >
+        {{ chipLabel(opt) }}
+      </button>
+    }
+  </div>
+
+  <div class="grid gap-1">
+    <label class="text-xs font-medium text-slate-600 dark:text-slate-300" for="cart-addr-landmark">
+      Landmark (optional)
+    </label>
+    <input
+      id="cart-addr-landmark"
+      type="text"
+      [ngModel]="landmark()"
+      (ngModelChange)="landmark.set($event)"
+      placeholder="Near main gate, 2nd floor…"
+      class="focus-ring w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+    />
+  </div>
+
+  @if (geocodeHint()) {
+    <p class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+      {{ geocodeHint() }}
+    </p>
+  }
+
+  @if (fullAddress().trim().length) {
+    <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs leading-relaxed text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+      <span class="font-semibold text-slate-900 dark:text-white">Selected</span>
+      <p class="mt-1 whitespace-pre-wrap">{{ fullAddress() }}</p>
+      @if (showMapPreview()) {
+        <p class="mt-1 font-mono text-[10px] text-slate-500 dark:text-slate-400">
+          {{ latitude()?.toFixed(6) }}, {{ longitude()?.toFixed(6) }}
+        </p>
+      }
+    </div>
+  }
+
+  @if (showMapPreview()) {
+    <div class="overflow-hidden rounded-2xl border border-slate-200 ring-1 ring-slate-200/60 dark:border-slate-700 dark:ring-slate-700/60">
+      <google-map
+        [center]="mapCenter()"
+        [zoom]="mapZoom()"
+        [options]="mapUiOptions"
+        height="160px"
+        width="100%"
+      >
+        <map-marker
+          [position]="markerPosition()"
+          [options]="deliveryMarkerOptions"
+          (mapDragend)="onDeliveryMarkerDragEnd($event)"
+        />
+      </google-map>
+    </div>
+  }
+</div>

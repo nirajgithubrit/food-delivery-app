@@ -7,6 +7,10 @@ const asyncHandler = require("../middleware/asyncHandler");
 const { assertStatusTransition } = require("../utils/orderTransitions");
 const { getPrimaryRestaurantSnapshot } = require("../utils/restaurantResolve");
 const { stripDeliveryPin } = require("../utils/orderPublic");
+const {
+  normalizeDeliveryAddressInput,
+  deliveryAddressFromLegacyLocation,
+} = require("../utils/deliveryAddress");
 const { notifyUsersByRole, notifyUserById } = require("../services/pushNotification.service");
 
 function makeDeliveryPin() {
@@ -32,16 +36,53 @@ function getCustomerFacingStatus(status) {
   return String(status || "pending").toLowerCase();
 }
 
+async function persistCustomerSavedDeliveryAddress(userId, role, deliveryAddress) {
+  if (role !== "customer" || !deliveryAddress) return;
+  const at = String(deliveryAddress.addressType || "other").toLowerCase();
+  const lastType = at === "office" ? "office" : at === "home" ? "home" : "other";
+  if (at !== "home" && at !== "office") {
+    await User.findByIdAndUpdate(String(userId), { $set: { lastCheckoutAddressType: lastType } });
+    return;
+  }
+  const snapshot = {
+    fullAddress: String(deliveryAddress.fullAddress || "").trim(),
+    latitude: Number(deliveryAddress.latitude),
+    longitude: Number(deliveryAddress.longitude),
+    landmark: String(deliveryAddress.landmark || "").trim(),
+    city: String(deliveryAddress.city || "").trim(),
+    state: String(deliveryAddress.state || "").trim(),
+    pincode: String(deliveryAddress.pincode || "").trim(),
+    updatedAt: new Date(),
+  };
+  const path = at === "home" ? "savedDeliveryAddresses.home" : "savedDeliveryAddresses.office";
+  await User.findByIdAndUpdate(String(userId), {
+    $set: {
+      [path]: snapshot,
+      lastCheckoutAddressType: lastType,
+    },
+  });
+}
+
 exports.placeOrder = asyncHandler(async (req, res) => {
   const {
     items,
     totalAmount,
-    location,
+    location: rawLocation,
+    deliveryAddress: rawDeliveryAddress,
     phone,
     paymentMethod = "cod",
   } = req.body;
 
   const paymentStatus = paymentMethod === "upi" ? "pending" : "na";
+
+  let deliveryAddress = normalizeDeliveryAddressInput(rawDeliveryAddress);
+  let location = null;
+  if (deliveryAddress) {
+    location = { lat: deliveryAddress.latitude, lng: deliveryAddress.longitude };
+  } else if (rawLocation && Number.isFinite(Number(rawLocation.lat)) && Number.isFinite(Number(rawLocation.lng))) {
+    location = { lat: Number(rawLocation.lat), lng: Number(rawLocation.lng) };
+    deliveryAddress = deliveryAddressFromLegacyLocation(location);
+  }
 
   const safeItems = (Array.isArray(items) ? items : []).map((item) => ({
     _id: item?._id,
@@ -60,6 +101,7 @@ exports.placeOrder = asyncHandler(async (req, res) => {
     items: safeItems,
     totalAmount,
     location,
+    deliveryAddress,
     phone,
     paymentMethod,
     paymentStatus,
@@ -93,6 +135,8 @@ exports.placeOrder = asyncHandler(async (req, res) => {
     { title: "New order", body: `Pool order ${short} · ₹${amount}` },
     { type: "new_order_pool", orderId: String(order._id), click_path: "/delivery/dashboard" },
   );
+
+  await persistCustomerSavedDeliveryAddress(req.user.id, req.user.role, deliveryAddress);
 
   ApiResponse.success(res, stripDeliveryPin(order), 201);
 });

@@ -1,4 +1,5 @@
 import {
+  APP_INITIALIZER,
   ApplicationConfig,
   ErrorHandler,
   importProvidersFrom,
@@ -17,10 +18,17 @@ import { apiResponseInterceptor } from "./interceptors/api-response.interceptor"
 import { authRefreshInterceptor } from "./interceptors/auth-refresh.interceptor";
 import { authTokenInterceptor } from "./interceptors/auth-token.interceptor";
 import { AppErrorHandler } from "./core/errors/app-error.handler";
+import { BrandingService } from "./shared/services/branding.service";
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (branding: BrandingService) => () => branding.load(),
+      deps: [BrandingService],
+      multi: true,
+    },
     provideRouter(routes),
     provideAnimationsAsync(),
     provideHttpClient(

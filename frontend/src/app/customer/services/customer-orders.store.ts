@@ -20,6 +20,16 @@ export type CustomerOrder = {
   deliveryLocation?: { lat: number; lng: number };
   location?: { lat: number; lng: number };
   restaurantLocation?: { lat: number; lng: number };
+  deliveryAddress?: {
+    fullAddress?: string;
+    latitude?: number;
+    longitude?: number;
+    landmark?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    addressType?: "home" | "office" | "other";
+  };
 };
 
 const TERMINAL = new Set(["delivered", "cancelled", "rejected"]);

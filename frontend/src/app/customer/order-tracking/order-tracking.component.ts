@@ -101,11 +101,37 @@ export class OrderTrackingComponent {
     styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }],
   };
 
-  bikeIcon: google.maps.Icon = {
-    url: "bike_icon.png",
-    scaledSize: new google.maps.Size(45, 45),
-    anchor: new google.maps.Point(22, 22),
-  };
+  /** Bike artwork faces east in the PNG; Maps rotation is clockwise from north. */
+  private static readonly BIKE_ICON_PX = 88;
+  private static readonly BIKE_ICON_ROTATION_OFFSET = -90;
+
+  readonly markerHeading = signal(0);
+
+  /**
+   * Plain width/height/x/y literals (no `google.maps.Size` ctor) so the marker
+   * is safe when this route loads before the Maps script has finished.
+   */
+  readonly bikeIcon = {
+    url: "bike-icon.png",
+    scaledSize: {
+      width: OrderTrackingComponent.BIKE_ICON_PX,
+      height: OrderTrackingComponent.BIKE_ICON_PX,
+    },
+    anchor: {
+      x: OrderTrackingComponent.BIKE_ICON_PX / 2,
+      y: OrderTrackingComponent.BIKE_ICON_PX / 2,
+    },
+  } as google.maps.Icon;
+
+  readonly bikeMarkerOptions = computed((): google.maps.MarkerOptions => {
+    const rotation =
+      (this.markerHeading() + OrderTrackingComponent.BIKE_ICON_ROTATION_OFFSET + 360) % 360;
+    return {
+      icon: this.bikeIcon,
+      optimized: false,
+      rotation,
+    } as google.maps.MarkerOptions;
+  });
 
   readonly currentStepIndex = computed(() => this.getStepIndex(this.order()?.status));
 
@@ -162,7 +188,10 @@ export class OrderTrackingComponent {
   private readonly mapSyncEffect = effect(
     () => {
       const o = this.order();
-      if (!o?._id || !o.location || !o.restaurantLocation) return;
+      if (!o?._id || !o.restaurantLocation) return;
+
+      const cust = this.customerDropoffLatLng(o);
+      if (!cust) return;
 
       const id = String(o._id);
       if (id !== this.lastJoinedOrderId) {
@@ -174,9 +203,8 @@ export class OrderTrackingComponent {
         this.socket.emit("join-order", id);
       }
 
-      const cust = this.toLatLng(o.location);
       const rest = this.toLatLng(o.restaurantLocation);
-      if (!cust || !rest) return;
+      if (!rest) return;
 
       this.customerLocation.set(cust);
       this.restaurantLocation.set(rest);
@@ -201,6 +229,7 @@ export class OrderTrackingComponent {
         this.lastDeliveryCoordsKey = deliveryKey;
       }
       this.setMarkerAnimated(markerGoal, riderMoved);
+      this.syncMarkerHeadingFromPath();
 
       const routeTarget = this.routeDestinationForStatus(String(o.status));
       this.scheduleDebouncedRoute(markerGoal, routeTarget, id);
@@ -404,12 +433,14 @@ export class OrderTrackingComponent {
             this.isNear.set(distance < 0.005);
             if (path.length) {
               this.applyViewportFit(path);
+              this.syncMarkerHeadingFromPath();
             }
           } else {
             this.directionsResults.set(undefined);
             this.routePolylinePath.set([origin, destination]);
             this.eta.set("—");
             this.applyViewportFit([origin, destination, this.markerPosition()]);
+            this.syncMarkerHeadingFromPath();
           }
         });
       },
@@ -424,6 +455,17 @@ export class OrderTrackingComponent {
     const lng = Number(raw.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { lat, lng };
+  }
+
+  /** Prefer checkout `deliveryAddress` coordinates; fall back to legacy `location`. */
+  private customerDropoffLatLng(o: CustomerOrder): google.maps.LatLngLiteral | null {
+    const da = o.deliveryAddress;
+    if (da && da.latitude != null && da.longitude != null) {
+      const lat = Number(da.latitude);
+      const lng = Number(da.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+    }
+    return this.toLatLng(o.location);
   }
 
   private applyViewportFit(points: google.maps.LatLngLiteral[]): void {
@@ -458,6 +500,7 @@ export class OrderTrackingComponent {
       this.cancelMarkerAnim();
       this.markerPosition.set(goal);
       this.center.set(goal);
+      this.updateMarkerHeadingFromSegment(this.markerPosition(), goal);
       return;
     }
 
@@ -465,9 +508,11 @@ export class OrderTrackingComponent {
     if (from.lat === 0 && from.lng === 0) {
       this.markerPosition.set(goal);
       this.center.set(goal);
+      this.updateMarkerHeadingFromSegment(from, goal);
       return;
     }
 
+    this.updateMarkerHeadingFromSegment(from, goal);
     this.cancelMarkerAnim();
     const startTime = performance.now();
     const durationMs = 380;
@@ -500,6 +545,62 @@ export class OrderTrackingComponent {
     const dx = a.lat - b.lat;
     const dy = a.lng - b.lng;
     return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  private syncMarkerHeadingFromPath(): void {
+    const path = this.routePolylinePath();
+    if (path.length < 2) return;
+    const heading = this.headingAlongPath(path, this.markerPosition());
+    if (heading != null) {
+      this.markerHeading.set(heading);
+    }
+  }
+
+  private updateMarkerHeadingFromSegment(
+    from: google.maps.LatLngLiteral,
+    to: google.maps.LatLngLiteral,
+  ): void {
+    const heading = this.computeBearing(from, to);
+    if (heading != null) {
+      this.markerHeading.set(heading);
+    }
+  }
+
+  private headingAlongPath(
+    path: google.maps.LatLngLiteral[],
+    at: google.maps.LatLngLiteral,
+  ): number | null {
+    if (path.length < 2) return null;
+
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < path.length; i++) {
+      const d = this.getDistance(at, path[i]);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+
+    const fromIdx = Math.min(bestIdx, path.length - 2);
+    return this.computeBearing(path[fromIdx], path[fromIdx + 1]);
+  }
+
+  private computeBearing(
+    from: google.maps.LatLngLiteral,
+    to: google.maps.LatLngLiteral,
+  ): number | null {
+    if (this.getDistance(from, to) < 1e-9) return null;
+
+    const lat1 = (from.lat * Math.PI) / 180;
+    const lat2 = (to.lat * Math.PI) / 180;
+    const dLng = ((to.lng - from.lng) * Math.PI) / 180;
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x =
+      Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    const deg = (Math.atan2(y, x) * 180) / Math.PI;
+    return (deg + 360) % 360;
   }
 
 }
