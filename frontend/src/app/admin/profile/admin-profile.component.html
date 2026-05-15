@@ -126,25 +126,25 @@
       >
         <p class="app-text-section-label">Logo &amp; banner</p>
         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Logo updates favicon, splash screen, and PWA icons app-wide (refresh if needed).
+          Logo updates favicon, splash screen, and PWA icons app-wide.
         </p>
-        @if (logoUrl || bannerUrl) {
+        @if (hasImagePreview()) {
           <div class="mt-4 flex flex-wrap gap-4">
-            @if (logoUrl) {
+            @if (logoDisplayUrl()) {
               <div>
                 <p class="text-[10px] font-bold uppercase text-slate-500">Current logo</p>
                 <img
-                  [src]="logoUrl"
+                  [src]="logoDisplayUrl()"
                   alt="Restaurant logo"
                   class="mt-1 h-20 w-20 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
                 />
               </div>
             }
-            @if (bannerUrl) {
+            @if (bannerDisplayUrl()) {
               <div class="min-w-0 flex-1">
                 <p class="text-[10px] font-bold uppercase text-slate-500">Current banner</p>
                 <img
-                  [src]="bannerUrl"
+                  [src]="bannerDisplayUrl()"
                   alt="Restaurant banner"
                   class="mt-1 max-h-24 w-full max-w-sm rounded-xl border border-slate-200 object-cover dark:border-slate-700"
                 />

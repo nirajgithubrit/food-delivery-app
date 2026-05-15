@@ -4,8 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
-    "build:dev": "ng build --configuration=dev",
+    "build": "ng build && node scripts/write-gg-api-meta.mjs production",
+    "build:dev": "ng build --configuration=dev && node scripts/write-gg-api-meta.mjs dev",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "cy:open": "cypress open",
