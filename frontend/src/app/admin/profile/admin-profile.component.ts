@@ -1,6 +1,9 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
+  DestroyRef,
+  computed,
   inject,
   OnInit,
   signal,
@@ -24,10 +27,41 @@ export class AdminProfileComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
   private readonly branding = inject(BrandingService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly legacy = signal(false);
+
+  readonly logoUrl = signal("");
+  readonly bannerUrl = signal("");
+  /** Busts browser cache on `<img [src]>` after upload. */
+  private readonly logoCacheKey = signal(0);
+  private readonly bannerCacheKey = signal(0);
+  /** Local preview while a new file is chosen (before upload completes). */
+  readonly logoPickPreview = signal<string | null>(null);
+  readonly bannerPickPreview = signal<string | null>(null);
+
+  readonly logoDisplayUrl = computed(() => {
+    const picked = this.logoPickPreview();
+    if (picked) return picked;
+    return this.withCacheBust(this.logoUrl(), this.logoCacheKey());
+  });
+
+  readonly bannerDisplayUrl = computed(() => {
+    const picked = this.bannerPickPreview();
+    if (picked) return picked;
+    return this.withCacheBust(this.bannerUrl(), this.bannerCacheKey());
+  });
+
+  readonly hasImagePreview = computed(
+    () =>
+      !!this.logoDisplayUrl() ||
+      !!this.bannerDisplayUrl() ||
+      !!this.logoPickPreview() ||
+      !!this.bannerPickPreview(),
+  );
 
   restaurantId: string | null = null;
   name = "";
@@ -50,8 +84,6 @@ export class AdminProfileComponent implements OnInit {
 
   currentPassword = "";
   newPassword = "";
-  logoUrl = "";
-  bannerUrl = "";
   logoFile: File | null = null;
   bannerFile: File | null = null;
 
@@ -68,19 +100,25 @@ export class AdminProfileComponent implements OnInit {
         this.category = String(r["category"] || "");
         this.description = String(r["description"] || "");
         this.isOpen = r["isOpen"] !== false;
-        this.logoUrl = String(r["logoUrl"] || "");
-        this.bannerUrl = String(r["bannerUrl"] || "");
+        this.logoUrl.set(String(r["logoUrl"] || ""));
+        this.bannerUrl.set(String(r["bannerUrl"] || ""));
         const loc = r["location"] as { lat?: number; lng?: number } | undefined;
         if (loc && typeof loc.lat === "number" && typeof loc.lng === "number") {
           this.center.set({ lat: loc.lat, lng: loc.lng });
           this.marker.set({ lat: loc.lat, lng: loc.lng });
         }
         this.loading.set(false);
+        this.cdr.markForCheck();
       },
       error: () => {
         this.toast.error("Could not load profile");
         this.loading.set(false);
       },
+    });
+
+    this.destroyRef.onDestroy(() => {
+      this.revokePickPreview("logo");
+      this.revokePickPreview("banner");
     });
   }
 
@@ -139,13 +177,12 @@ export class AdminProfileComponent implements OnInit {
     if (this.bannerFile) fd.append("banner", this.bannerFile);
     this.api.updateRestaurantImages(fd).subscribe({
       next: (r) => {
-        const body = r as Record<string, unknown>;
-        this.toast.success("Images updated");
-        this.logoUrl = String(body["logoUrl"] || this.logoUrl);
-        this.bannerUrl = String(body["bannerUrl"] || this.bannerUrl);
+        this.applyUploadedImages(r);
         this.logoFile = null;
         this.bannerFile = null;
+        this.toast.success("Images updated");
         void this.branding.refreshFromApi();
+        this.cdr.markForCheck();
       },
       error: (err) => {
         const msg =
@@ -176,11 +213,54 @@ export class AdminProfileComponent implements OnInit {
 
   onLogoPick(ev: Event): void {
     const input = ev.target as HTMLInputElement;
-    this.logoFile = input.files?.[0] ?? null;
+    const file = input.files?.[0] ?? null;
+    this.logoFile = file;
+    this.revokePickPreview("logo");
+    this.logoPickPreview.set(file ? URL.createObjectURL(file) : null);
   }
 
   onBannerPick(ev: Event): void {
     const input = ev.target as HTMLInputElement;
-    this.bannerFile = input.files?.[0] ?? null;
+    const file = input.files?.[0] ?? null;
+    this.bannerFile = file;
+    this.revokePickPreview("banner");
+    this.bannerPickPreview.set(file ? URL.createObjectURL(file) : null);
+  }
+
+  private applyUploadedImages(data: unknown): void {
+    if (!data || typeof data !== "object") return;
+    const body = data as Record<string, unknown>;
+    const nextLogo = String(body["logoUrl"] ?? "").trim();
+    const nextBanner = String(body["bannerUrl"] ?? "").trim();
+
+    if (nextLogo) {
+      this.revokePickPreview("logo");
+      this.logoUrl.set(nextLogo);
+      this.logoCacheKey.update((k) => k + 1);
+    }
+    if (nextBanner) {
+      this.revokePickPreview("banner");
+      this.bannerUrl.set(nextBanner);
+      this.bannerCacheKey.update((k) => k + 1);
+    }
+  }
+
+  private withCacheBust(url: string, key: number): string {
+    if (!url) return "";
+    if (!key) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}v=${key}`;
+  }
+
+  private revokePickPreview(kind: "logo" | "banner"): void {
+    if (kind === "logo") {
+      const prev = this.logoPickPreview();
+      if (prev) URL.revokeObjectURL(prev);
+      this.logoPickPreview.set(null);
+      return;
+    }
+    const prev = this.bannerPickPreview();
+    if (prev) URL.revokeObjectURL(prev);
+    this.bannerPickPreview.set(null);
   }
 }

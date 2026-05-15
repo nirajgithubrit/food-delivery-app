@@ -6,15 +6,36 @@
   var STORAGE_KEY = "gg_branding_v1";
   var DEFAULT_ICON = "icons/icon-192x192.jpg";
 
+  var API_BY_HOST = {
+    "girgamthionlineorder.netlify.app":
+      "https://gir-gamthi-online-order.onrender.com/api",
+    "fooddeliveryappdev.netlify.app":
+      "https://food-delivery-app-dev.onrender.com/api",
+  };
+
   function apiBase() {
-    var meta = document.querySelector('meta[name="gg-api-url"]');
-    if (meta && meta.getAttribute("content")) {
-      return meta.getAttribute("content").replace(/\/+$/, "");
+    if (typeof window.__GG_API_BASE__ === "string" && window.__GG_API_BASE__) {
+      return window.__GG_API_BASE__.replace(/\/+$/, "");
     }
+
     var host = window.location.hostname;
     if (host === "localhost" || host === "127.0.0.1") {
       return "http://localhost:3000/api";
     }
+
+    if (API_BY_HOST[host]) {
+      return API_BY_HOST[host];
+    }
+
+    var meta = document.querySelector('meta[name="gg-api-url"]');
+    var metaUrl = meta && meta.getAttribute("content");
+    if (metaUrl) {
+      var trimmed = String(metaUrl).trim().replace(/\/+$/, "");
+      if (trimmed && !/localhost|127\.0\.0\.1/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+
     return "https://gir-gamthi-online-order.onrender.com/api";
   }
 
