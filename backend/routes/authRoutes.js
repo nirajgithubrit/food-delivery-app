@@ -9,10 +9,11 @@ const {
   firebaseLogin,
   logout,
   getMe,
+  getSavedDeliveryAddresses,
   refreshTokens,
 } = require("../controllers/authController");
 const { authLoginLimiter, adminRegisterLimiter } = require("../middleware/rateLimiters");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, authorize } = require("../middleware/authMiddleware");
 const validateRequest = require("../middleware/validateRequest");
 const { body } = require("express-validator");
 
@@ -55,5 +56,11 @@ router.post(
 router.post("/delivery", authLoginLimiter, deliveryLogin);
 router.post("/logout", logout);
 router.get("/me", protect, getMe);
+router.get(
+  "/me/saved-delivery-addresses",
+  protect,
+  authorize("customer"),
+  getSavedDeliveryAddresses,
+);
 
 module.exports = router;

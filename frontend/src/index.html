@@ -9,13 +9,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
     <meta name="apple-mobile-web-app-title" content="Gir Gamthi"/>
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png"/>
-    <link rel="icon" type="image/x-icon" href="favicon.png"/>
+    <link rel="apple-touch-icon" href="icons/icon-192x192.jpg"/>
+    <link rel="icon" type="image/x-icon" href="favicon.jpg"/>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&amp;display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
     <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCeE-s4yTloqvacHp6cBjnsbQL48vKtP4U&amp;libraries=places&amp;loading=async"></script>
     <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#f97316">
+    <meta name="theme-color" content="#f97316"/>
+    <meta name="gg-api-url" content="http://localhost:3000/api"/>
+    <script src="branding-boot.js"></script>
   <style>
     #app-boot-splash {
       position: fixed;
@@ -52,12 +54,16 @@
     <div id="app-boot-splash" aria-hidden="true">
       <img
         class="boot-splash-logo"
-        src="icons/icon-192x192.png"
+        src="icons/icon-192x192.jpg"
         width="96"
         height="96"
         alt=""
+        decoding="async"
       />
-      <p style="margin-top: 1.25rem; font-family: system-ui, sans-serif; font-weight: 700; color: #0f172a">
+      <p
+        data-boot-title
+        style="margin-top: 1.25rem; font-family: system-ui, sans-serif; font-weight: 700; color: #0f172a"
+      >
         Gir Gamthi
       </p>
       <p style="margin-top: 0.35rem; font-size: 13px; color: #64748b">Starting up…</p>

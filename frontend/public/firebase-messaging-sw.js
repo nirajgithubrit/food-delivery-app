@@ -53,8 +53,8 @@ messaging.onBackgroundMessage((payload) => {
     (payload.data && payload.data.body) ||
     "";
   const icon =
-    payload.notification?.icon || "/icons/icon-192x192.png";
-  const badge = "/icons/icon-72x72.png";
+    payload.notification?.icon || "/icons/icon-192x192.jpg";
+  const badge = "/icons/icon-72x72.jpg";
   const tag =
     (payload.data && (payload.data.orderId || payload.data.type)) ||
     "fcm-default";

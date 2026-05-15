@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   signal,
+  ViewChild,
 } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { finalize } from "rxjs";
@@ -15,6 +16,8 @@ import { Router, RouterLink } from "@angular/router";
 import { UiCardComponent } from "../../shared/ui/ui-card/ui-card.component";
 import { UiEmptyStateComponent } from "../../shared/ui/ui-empty-state/ui-empty-state.component";
 import { CustomerOrdersStore, CustomerOrder } from "../services/customer-orders.store";
+import { CartDeliveryAddressComponent } from "./cart-delivery-address/cart-delivery-address.component";
+import { OrderHandoffService } from "../../services/order-handoff.service";
 
 @Component({
   selector: "app-cart",
@@ -24,17 +27,22 @@ import { CustomerOrdersStore, CustomerOrder } from "../services/customer-orders.
     RouterLink,
     UiCardComponent,
     UiEmptyStateComponent,
+    CartDeliveryAddressComponent,
   ],
   templateUrl: "./cart.component.html",
   styleUrl: "./cart.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CartComponent {
+  @ViewChild(CartDeliveryAddressComponent)
+  private readonly deliverySection?: CartDeliveryAddressComponent;
+
   private readonly cart = inject(CartService);
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly ordersStore = inject(CustomerOrdersStore);
+  private readonly orderHandoff = inject(OrderHandoffService);
 
   readonly cartItems = toSignal(this.cart.getItems(), {
     initialValue: [] as any[],
@@ -67,8 +75,9 @@ export class CartComponent {
     const items = this.cartItems();
     if (!items.length) return;
 
-    if (!navigator.geolocation) {
-      this.toast.error("Location is required to place an order.");
+    const geo = this.deliverySection?.getOrderGeoPayload();
+    if (!geo) {
+      this.toast.error("Choose a delivery address — search, pick a suggestion, or use current location.");
       return;
     }
 
@@ -88,54 +97,47 @@ export class CartComponent {
 
     this.placingOrder.set(true);
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const orderData = {
-          items,
-          totalAmount: this.total(),
-          location: {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          },
-          phone,
-          paymentMethod: this.paymentMethod(),
-        };
+    const orderData = {
+      items,
+      totalAmount: this.total(),
+      deliveryAddress: geo.deliveryAddress,
+      location: geo.location,
+      phone,
+      paymentMethod: this.paymentMethod(),
+    };
 
-        this.api
-          .placeOrder(orderData)
-          .pipe(finalize(() => this.placingOrder.set(false)))
-          .subscribe({
-            next: (res: unknown) => {
-              const order = res as CustomerOrder;
-              localStorage.setItem("orderId", order._id);
-              this.cart.clear();
-              this.ordersStore.selectedTrackingOrder.set(null);
-              if (order?._id) {
-                this.ordersStore.activeOrders.update((list) => {
-                  const id = String(order._id);
-                  if (list.some((o) => String(o._id) === id)) return list;
-                  return [order, ...list];
-                });
-              }
-              this.toast.success("Order placed! Track it live.");
-              void this.router.navigate(["/orders", order._id], {
-                replaceUrl: true,
-              });
-            },
-            error: (err) => {
-              const msg =
-                err.error?.error?.message ??
-                err.message ??
-                "Could not place order";
-              this.toast.error(msg);
-            },
+    this.api
+      .placeOrder(orderData)
+      .pipe(finalize(() => this.placingOrder.set(false)))
+      .subscribe({
+        next: (res: unknown) => {
+          const order = res as CustomerOrder;
+          localStorage.setItem("orderId", order._id);
+          this.cart.clear();
+          this.ordersStore.selectedTrackingOrder.set(null);
+          if (order?._id) {
+            this.ordersStore.activeOrders.update((list) => {
+              const id = String(order._id);
+              if (list.some((o) => String(o._id) === id)) return list;
+              return [order, ...list];
+            });
+          }
+          this.toast.success("Order placed! Track it live.");
+          const oid = String(order._id);
+          this.orderHandoff.show(oid);
+          void this.router.navigate(["/orders", oid], { replaceUrl: true }).then((ok) => {
+            if (!ok) {
+              this.orderHandoff.dismiss();
+            }
           });
-      },
-      () => {
-        this.placingOrder.set(false);
-        this.toast.error("Allow location access to deliver to your address.");
-      },
-      { enableHighAccuracy: true, timeout: 12000 },
-    );
+        },
+        error: (err) => {
+          const msg =
+            err.error?.error?.message ??
+            err.message ??
+            "Could not place order";
+          this.toast.error(msg);
+        },
+      });
   }
 }

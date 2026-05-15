@@ -4,7 +4,7 @@
   >
     <header
       class="login-premium-hero relative z-[1] flex h-[min(26dvh,11rem)] shrink-0 flex-col items-center justify-end overflow-hidden px-4 pb-8 text-center pt-[max(1rem,env(safe-area-inset-top,0px))] sm:h-[min(28dvh,12rem)] sm:px-6 sm:pb-9 sm:pt-[max(1.25rem,env(safe-area-inset-top,0px))] md:h-[min(30dvh,13.5rem)] md:px-8 md:pb-10 md:pt-[max(1.5rem,env(safe-area-inset-top,0px))] lg:h-[min(32dvh,14.5rem)]"
-      aria-label="Gir Gamthi"
+      [attr.aria-label]="branding.name()"
     >
       <div class="login-premium-hero-bg" aria-hidden="true"></div>
       <div class="login-premium-hero-vignette" aria-hidden="true"></div>
@@ -15,7 +15,7 @@
           class="login-premium-title font-hero text-[clamp(1.5rem,5.8vw,3.5rem)] font-semibold leading-[1.06] tracking-tight text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.35)] sm:text-[clamp(1.85rem,6.2vw,3.75rem)]"
           id="login-customer-brand-title"
         >
-          Gir Gamthi
+          {{ branding.name() }}
         </div>
         <p
           class="login-premium-welcome mt-1.5 text-xs font-medium text-white/85 sm:mt-3 sm:text-sm md:text-base max-md:line-clamp-2"
@@ -199,7 +199,7 @@
       <div class="login-staff-hero-vignette" aria-hidden="true"></div>
 
       <div class="relative z-10 max-w-md px-1">
-        <p class="font-hero text-lg font-semibold text-white/90 sm:text-xl">Gir Gamthi</p>
+        <p class="font-hero text-lg font-semibold text-white/90 sm:text-xl">{{ branding.name() }}</p>
         <p
           class="mt-0.5 font-display text-[clamp(1.1rem,4.2vw,1.65rem)] font-bold leading-tight tracking-tight text-white drop-shadow-sm sm:text-xl md:text-2xl"
         >

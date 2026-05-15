@@ -5,6 +5,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 const ApiResponse = require("../utils/apiResponse");
 const { protect, authorize } = require("../middleware/authMiddleware");
 const AppError = require("../utils/AppError");
+const { broadcastMenuUpdated } = require("../utils/menuBroadcast");
 
 function normalizeCategory(input) {
   return String(input || "")
@@ -52,6 +53,7 @@ router.post(
       isAvailable,
     });
     await item.save();
+    broadcastMenuUpdated(req.app.get("io"), { scope: "items", action: "created" });
     ApiResponse.success(res, item, 201);
   }),
 );
@@ -100,6 +102,7 @@ router.put(
     if (!updated) {
       throw new AppError("Item not found", 404);
     }
+    broadcastMenuUpdated(req.app.get("io"), { scope: "items", action: "updated" });
     ApiResponse.success(res, updated);
   }),
 );
@@ -113,6 +116,7 @@ router.delete(
     if (!removed) {
       throw new AppError("Item not found", 404);
     }
+    broadcastMenuUpdated(req.app.get("io"), { scope: "items", action: "deleted" });
     ApiResponse.success(res, { _id: removed._id });
   }),
 );

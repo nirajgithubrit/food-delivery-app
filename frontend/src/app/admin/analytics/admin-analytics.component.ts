@@ -52,6 +52,14 @@ export class AdminAnalyticsComponent implements AfterViewInit, OnDestroy {
     return Array.isArray(v) ? (v as { hour: number; orders: number }[]) : [];
   }
 
+  /** Hour bucket is already Asia/Kolkata from the API. */
+  formatPeakHour(hour: number): string {
+    const h = Math.floor(Number(hour)) % 24;
+    const period = h < 12 ? "AM" : "PM";
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:00 ${period}`;
+  }
+
   ngAfterViewInit(): void {
     this.load();
   }

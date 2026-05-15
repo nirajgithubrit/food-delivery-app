@@ -45,6 +45,11 @@ function registerSocketHandlers(io) {
       socket.join(String(id));
     });
 
+    /** Customer menu + admin add-item: live catalog refresh when items/categories change */
+    socket.on("join-menu", () => {
+      socket.join("menu");
+    });
+
     socket.on("send-location", async (data) => {
       try {
         const { orderId, lat, lng } = data || {};

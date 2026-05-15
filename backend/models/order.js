@@ -24,6 +24,21 @@ const OrderSchema = new mongoose.Schema({
     lat: Number,
     lng: Number,
   },
+  /** Exact drop-off chosen at checkout (text + coordinates). `location` mirrors lat/lng for legacy clients. */
+  deliveryAddress: {
+    fullAddress: { type: String, default: "" },
+    latitude: { type: Number },
+    longitude: { type: Number },
+    landmark: { type: String, default: "" },
+    city: { type: String, default: "" },
+    state: { type: String, default: "" },
+    pincode: { type: String, default: "" },
+    addressType: {
+      type: String,
+      enum: ["home", "office", "other"],
+      default: "other",
+    },
+  },
   deliveryBoyId: { type: String, default: null, index: true },
   deliveryLocation: {
     lat: Number,

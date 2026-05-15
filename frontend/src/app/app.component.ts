@@ -3,13 +3,15 @@ import {
   ApplicationRef,
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   inject,
 } from "@angular/core";
-import { toSignal } from "@angular/core/rxjs-interop";
+import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
 import { NavigationEnd, Router, RouterOutlet } from "@angular/router";
-import { filter, first, map, startWith } from "rxjs";
+import { filter, first, firstValueFrom, map, startWith } from "rxjs";
 import { AuthService } from "./services/auth.service";
+import { OrderHandoffService } from "./services/order-handoff.service";
 import { ThemeService } from "./shared/services/theme.service";
 import { NotificationService } from "./shared/services/notification.service";
 import { ToastHostComponent } from "./shared/ui/toast-host/toast-host.component";
@@ -17,6 +19,7 @@ import { PushNotificationCtaComponent } from "./shared/ui/push-notification-cta/
 import { PwaUpdatePromptComponent } from "./shared/ui/pwa-update-prompt/pwa-update-prompt.component";
 import { ThemeToggleComponent } from "./shared/ui/theme-toggle/theme-toggle.component";
 import { PwaUpdateService } from "./shared/services/pwa-update.service";
+import { BrandingService } from "./shared/services/branding.service";
 
 function isLoginUrl(rawUrl: string): boolean {
   const path = (rawUrl.split("?")[0] || "/").replace(/\/+$/, "") || "/";
@@ -46,11 +49,31 @@ export class AppComponent implements OnInit, AfterViewInit {
   /** Registers SW update checks in production (Netlify / PWA). */
   private readonly _pwaUpdate = inject(PwaUpdateService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly auth = inject(AuthService);
   private readonly notifications = inject(NotificationService);
   private readonly appRef = inject(ApplicationRef);
+  readonly orderHandoff = inject(OrderHandoffService);
+  private readonly branding = inject(BrandingService);
 
   ngOnInit(): void {
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        if (!this.orderHandoff.active()) return;
+        const path = (this.router.url.split("?")[0] || "").replace(/\/+$/, "");
+        if (/^\/orders\/[^/]+$/.test(path)) {
+          window.setTimeout(() => this.orderHandoff.dismiss(), 420);
+          return;
+        }
+        if (!path.startsWith("/orders/")) {
+          this.orderHandoff.dismiss();
+        }
+      });
+
     if (this.auth.isLoggedIn()) {
       void this.notifications.initForLoggedInUser();
       // Single delayed retry — MessagingService dedupes concurrent inits; avoids triple FCM work on iOS PWA.
@@ -77,12 +100,14 @@ export class AppComponent implements OnInit, AfterViewInit {
       window.setTimeout(() => el.remove(), 380);
     };
     const maxWait = window.setTimeout(done, 12_000);
-    this.appRef.isStable
-      .pipe(filter(Boolean), first())
-      .subscribe(() => {
-        window.clearTimeout(maxWait);
-        done();
-      });
+    Promise.all([
+      firstValueFrom(this.appRef.isStable.pipe(filter(Boolean), first())),
+      this.branding.whenReady(),
+    ]).then(() => {
+      this.branding.applyBootSplash();
+      window.clearTimeout(maxWait);
+      done();
+    });
   }
 
   /** Login routes: mobile theme toggle moves to bottom-right (see global styles). */

@@ -64,7 +64,7 @@ exports.getOverview = asyncHandler(async (req, res) => {
       { $match: baseMatch },
       {
         $group: {
-          _id: { $hour: "$createdAt" },
+          _id: { $hour: { date: "$createdAt", timezone: "Asia/Kolkata" } },
           count: { $sum: 1 },
         },
       },

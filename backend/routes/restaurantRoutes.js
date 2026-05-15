@@ -2,6 +2,8 @@ const express = require("express");
 const multer = require("multer");
 const { protect, authorize } = require("../middleware/authMiddleware");
 const {
+  getPublicBranding,
+  getWebManifest,
   getMyRestaurant,
   updateMyRestaurant,
   updateRestaurantImages,
@@ -22,6 +24,9 @@ const upload = multer({
     cb(new AppError("Only image files are allowed", 400));
   },
 });
+
+router.get("/branding", getPublicBranding);
+router.get("/manifest.webmanifest", getWebManifest);
 
 router.get("/me", protect, authorize("admin"), getMyRestaurant);
 router.put("/me", protect, authorize("admin"), updateMyRestaurant);

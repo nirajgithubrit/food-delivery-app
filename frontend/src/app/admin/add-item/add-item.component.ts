@@ -155,24 +155,35 @@ export class AddItemComponent {
     if (!file) return;
 
     this.uploadInProgress = true;
+    this.cdr.detectChanges();
     this.api.uploadItemImage(file).pipe(
       finalize(() => {
-        this.uploadInProgress = false;
-      })
+        this.zone.run(() => {
+          this.uploadInProgress = false;
+          this.cdr.detectChanges();
+        });
+      }),
     ).subscribe({
       next: (res: any) => {
         const imageUrl = typeof res?.imageUrl === 'string' ? res.imageUrl : '';
-        if (!imageUrl) {
-          this.toast.error("Image upload returned invalid URL.");
-          return;
-        }
-        this.item.image = imageUrl;
-        this.toast.success("Image uploaded.");
+        this.zone.run(() => {
+          if (!imageUrl) {
+            this.toast.error("Image upload returned invalid URL.");
+            this.cdr.detectChanges();
+            return;
+          }
+          this.item = { ...this.item, image: imageUrl };
+          this.cdr.detectChanges();
+          this.toast.success("Image uploaded.");
+        });
       },
       error: (err) => {
-        const msg = err.error?.error?.message ?? err.message ?? "Image upload failed.";
-        this.toast.error(msg);
-      }
+        this.zone.run(() => {
+          const msg = err.error?.error?.message ?? err.message ?? "Image upload failed.";
+          this.toast.error(msg);
+          this.cdr.detectChanges();
+        });
+      },
     });
   }
 
@@ -184,22 +195,29 @@ export class AddItemComponent {
     }
     this.api.addCategory(name).subscribe({
       next: (res: any) => {
-        const created = this.asObject<{ _id: string; name: string; slug: string }>(res);
-        if (!created?._id) {
-          this.toast.error("Category response invalid.");
-          return;
-        }
-        this.categories = [...this.categories, created].sort((a, b) => a.name.localeCompare(b.name));
-        this.newCategoryName = '';
-        if (!this.item.category) {
-          this.item.category = created.slug;
-        }
-        this.toast.success("Category added.");
+        this.zone.run(() => {
+          const created = this.asObject<{ _id: string; name: string; slug: string }>(res);
+          if (!created?._id) {
+            this.toast.error("Category response invalid.");
+            this.cdr.detectChanges();
+            return;
+          }
+          this.categories = [...this.categories, created].sort((a, b) => a.name.localeCompare(b.name));
+          this.newCategoryName = '';
+          if (!this.item.category) {
+            this.item = { ...this.item, category: created.slug };
+          }
+          this.cdr.detectChanges();
+          this.toast.success("Category added.");
+        });
       },
       error: (err) => {
-        const msg = err.error?.error?.message ?? err.message ?? "Could not add category.";
-        this.toast.error(msg);
-      }
+        this.zone.run(() => {
+          const msg = err.error?.error?.message ?? err.message ?? "Could not add category.";
+          this.toast.error(msg);
+          this.cdr.detectChanges();
+        });
+      },
     });
   }
 
@@ -224,26 +242,33 @@ export class AddItemComponent {
     }
     this.api.updateCategory(this.editingCategoryId, name).subscribe({
       next: (res: any) => {
-        const updated = this.asObject<{ _id: string; name: string; slug: string }>(res);
-        if (!updated?._id) {
-          this.toast.error("Category response invalid.");
-          return;
-        }
-        this.categories = this.categories
-          .map((c) => (c._id === editingId ? updated : c))
-          .sort((a, b) => a.name.localeCompare(b.name));
+        this.zone.run(() => {
+          const updated = this.asObject<{ _id: string; name: string; slug: string }>(res);
+          if (!updated?._id) {
+            this.toast.error("Category response invalid.");
+            this.cdr.detectChanges();
+            return;
+          }
+          this.categories = this.categories
+            .map((c) => (c._id === editingId ? updated : c))
+            .sort((a, b) => a.name.localeCompare(b.name));
 
-        if (previous && this.item.category === previous.slug) {
-          this.item.category = updated.slug;
-        }
+          if (previous && this.item.category === previous.slug) {
+            this.item = { ...this.item, category: updated.slug };
+          }
 
-        this.cancelEditCategory();
-        this.toast.success("Category updated.");
+          this.cancelEditCategory();
+          this.cdr.detectChanges();
+          this.toast.success("Category updated.");
+        });
       },
       error: (err) => {
-        const msg = err.error?.error?.message ?? err.message ?? "Could not update category.";
-        this.toast.error(msg);
-      }
+        this.zone.run(() => {
+          const msg = err.error?.error?.message ?? err.message ?? "Could not update category.";
+          this.toast.error(msg);
+          this.cdr.detectChanges();
+        });
+      },
     });
   }
 
@@ -257,11 +282,14 @@ export class AddItemComponent {
       image: String(item.image ?? ''),
       isAvailable: item.isAvailable !== false
     };
+    this.uploadInProgress = false;
+    this.cdr.detectChanges();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   cancelEditItem() {
     this.resetForm();
+    this.cdr.detectChanges();
   }
 
   removeItem(id: string) {

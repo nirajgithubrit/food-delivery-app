@@ -18,6 +18,7 @@ import { SocketService } from "../../services/socket.service";
 import { ToastService } from "../../shared/services/toast.service";
 import { NotificationService } from "../../shared/services/notification.service";
 import { FirebasePhoneAuthService } from "../firebase/firebase-phone-auth.service";
+import { BrandingService } from "../../shared/services/branding.service";
 
 export type LoginMode = "customer" | "admin" | "rider";
 
@@ -73,6 +74,7 @@ function mapFirebaseError(err: unknown): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent implements OnInit {
+  readonly branding = inject(BrandingService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

@@ -319,6 +319,18 @@ exports.firebaseLogin = asyncHandler(async (req, res) => {
   });
 });
 
+/** Customer: saved Home/Office delivery snapshots + last chip used at checkout */
+exports.getSavedDeliveryAddresses = asyncHandler(async (req, res) => {
+  const u = await User.findById(req.user.id)
+    .select("savedDeliveryAddresses lastCheckoutAddressType")
+    .lean();
+  if (!u) throw new AppError("User not found", 404);
+  ApiResponse.success(res, {
+    savedDeliveryAddresses: u.savedDeliveryAddresses || {},
+    lastCheckoutAddressType: u.lastCheckoutAddressType || "home",
+  });
+});
+
 exports.getMe = (req, res) => {
   ApiResponse.success(res, req.user);
 };

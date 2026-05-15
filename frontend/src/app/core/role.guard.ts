@@ -6,6 +6,7 @@ import {
 } from "@angular/router";
 import { Observable, catchError, map, of } from "rxjs";
 import { ApiService } from "../services/api.service";
+import { AuthService } from "../services/auth.service";
 import { ToastService } from "../shared/services/toast.service";
 
 @Injectable({ providedIn: "root" })
@@ -13,9 +14,19 @@ export class RoleGuard implements CanActivate {
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthService);
 
   canActivate(route: ActivatedRouteSnapshot): Observable<boolean> {
     const allowed = this.collectRoles(route);
+
+    if (!allowed?.length) {
+      return of(true);
+    }
+
+    const jwtRole = this.auth.getCurrentRole();
+    if (jwtRole && allowed.includes(jwtRole)) {
+      return of(true);
+    }
 
     return this.api.getMe().pipe(
       map((user: { role?: string }) => {

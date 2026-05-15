@@ -55,8 +55,8 @@ async function sendToTokens(tokens, notification, data = {}) {
   const flatData = stringifyData(data);
   const chunkSize = 500;
   const origin = String(config.publicWebOrigin || "").replace(/\/+$/, "");
-  const iconAbs = origin ? `${origin}/icons/icon-192x192.png` : undefined;
-  const badgeAbs = origin ? `${origin}/icons/icon-72x72.png` : undefined;
+  const iconAbs = origin ? `${origin}/icons/icon-192x192.jpg` : undefined;
+  const badgeAbs = origin ? `${origin}/icons/icon-72x72.jpg` : undefined;
   const webLink = flatData.click_url || undefined;
 
   for (let i = 0; i < list.length; i += chunkSize) {
@@ -89,8 +89,8 @@ async function sendToTokens(tokens, notification, data = {}) {
           headers: { Urgency: "high" },
           fcmOptions: webLink ? { link: webLink } : undefined,
           notification: {
-            icon: iconAbs || "/icons/icon-192x192.png",
-            badge: badgeAbs || "/icons/icon-72x72.png",
+            icon: iconAbs || "/icons/icon-192x192.jpg",
+            badge: badgeAbs || "/icons/icon-72x72.jpg",
           },
         },
       });

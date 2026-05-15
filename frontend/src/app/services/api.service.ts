@@ -184,6 +184,17 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/auth/me`, { withCredentials: true });
   }
 
+  /** Customer: saved Home/Office delivery snapshots from profile */
+  getSavedDeliveryAddresses() {
+    return this.http.get<{
+      savedDeliveryAddresses?: {
+        home?: Record<string, unknown> | null;
+        office?: Record<string, unknown> | null;
+      };
+      lastCheckoutAddressType?: string;
+    }>(`${this.baseUrl}/auth/me/saved-delivery-addresses`, { withCredentials: true });
+  }
+
   logout() {
     return this.http.post(`${this.baseUrl}/auth/logout`, {}, { withCredentials: true });
   }

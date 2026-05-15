@@ -5,6 +5,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 const ApiResponse = require("../utils/apiResponse");
 const { protect, authorize } = require("../middleware/authMiddleware");
 const AppError = require("../utils/AppError");
+const { broadcastMenuUpdated } = require("../utils/menuBroadcast");
 
 function makeSlug(name) {
   return String(name || "")
@@ -43,6 +44,7 @@ router.post(
     }
 
     const created = await Category.create({ name, slug });
+    broadcastMenuUpdated(req.app.get("io"), { scope: "categories", action: "created" });
     ApiResponse.success(res, created, 201);
   }),
 );
@@ -77,6 +79,7 @@ router.put(
     if (!updated) {
       throw new AppError("Category not found", 404);
     }
+    broadcastMenuUpdated(req.app.get("io"), { scope: "categories", action: "updated" });
     ApiResponse.success(res, updated);
   }),
 );
